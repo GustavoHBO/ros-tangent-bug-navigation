@@ -1,0 +1,29 @@
+version: '2'
+
+services:
+  viz:
+    image: osrf/ros:humble-desktop-full
+    container_name: ros_visualizer
+    networks:
+      - ros
+    environment:
+      - "ROS_MASTER_URI=http://ros-master:11311"
+      - "DISPLAY"
+      - "QT_X11_NO_MITSHM=1" #fix some QT bugs
+    #share your user to the container in order to access your x11
+    user: 1001:1001 #adapt as needed!
+    volumes: 
+      #share your x11 socket and permissions to the container
+      - ./:/src
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /etc/group:/etc/group:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
+      - /etc/sudoers:/etc/sudoers:ro
+      - /etc/sudoers.d:/etc/sudoers.d:ro
+      - /home/gustavo:/home/gustavo:rw #share your home with write permissions
+    command: ros2 run rviz2 rviz2
+
+networks:
+  ros:
+    driver: bridge
