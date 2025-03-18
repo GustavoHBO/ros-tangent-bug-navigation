@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="goal_marker">
+    <static>true</static>
+    <link name="goal_marker_link">
+      <visual name="goal_marker_visual">
+        <geometry>
+          <sphere>
+            <radius>0.1</radius>  <!-- Ajuste o tamanho conforme necessário -->
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>1.0 0.0 0.0 1.0</ambient> <!-- Cor vermelha -->
+          <diffuse>1.0 0.0 0.0 1.0</diffuse>
+        </material>
+      </visual>
+
+      <!-- Sem colisão -->
+      <collision name="goal_marker_collision">
+        <geometry>
+          <sphere>
+            <radius>0.1</radius>
+          </sphere>
+        </geometry>
+        <surface>
+          <contact>
+            <collide_bitmask>0</collide_bitmask> <!-- Desativa a colisão -->
+          </contact>
+        </surface>
+      </collision>
+    </link>
+  </model>
+</sdf>

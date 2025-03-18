@@ -1,0 +1,5 @@
+goal_x: 5.0
+goal_y: 5.0
+goal_tolerance: 0.2
+max_linear_speed: 0.5
+max_angular_speed: 1.0

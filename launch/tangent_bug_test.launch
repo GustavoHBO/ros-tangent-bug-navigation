@@ -1,0 +1,11 @@
+<launch>
+    <!-- Inicia a simulação no Gazebo -->
+    <!-- <include file="$(find pioneer3at_gazebo)/launch/pioneer3at_empty_world.launch" /> -->
+
+    <!-- Carrega os parâmetros -->
+    <rosparam file="$(find tangent_bug_2dnav)/config/params.yaml" />
+
+    <!-- Inicia o nó do algoritmo Tangent Bug -->
+    <node name="tangent_bug_2dnav" pkg="tangent_bug_2dnav" type="tangent_bug_2dnav" output="screen"/>
+</launch>
+  
