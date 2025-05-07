@@ -1,0 +1,25 @@
+[100%] Built target gazebo_map_creator
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/library_path.sh
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/library_path.dsv
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/scripts/request_map.py
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/lib/libgazebo_map_creator.so
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/lib/gazebo_map_creator/request_map.py
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/package_run_dependencies/gazebo_map_creator
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/parent_prefix_path/gazebo_map_creator
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/path.sh
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/path.dsv
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.bash
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.sh
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.zsh
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.dsv
+-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/package.dsv
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/packages/gazebo_map_creator
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/ament_cmake_export_libraries-extras.cmake
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/ament_cmake_export_dependencies-extras.cmake
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/gazebo_map_creatorConfig.cmake
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/gazebo_map_creatorConfig-version.cmake
+-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/package.xml

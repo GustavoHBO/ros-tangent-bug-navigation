@@ -1,0 +1,14 @@
+<launch>
+    <!-- Caminho completo ou relativo para o arquivo de configuração do mapa -->
+    <arg name="map_file" default="$(find tangent_bug_2dnav)/scripts/python/wg.yaml"/>
+
+    <!-- Lança o map_server com o mapa definido -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" output="screen"/>
+
+    <!-- <node name="octomap_server" pkg="octomap_server" type="octomap_server_node" output="screen">
+        <param name="frame_id" value="map"/>
+        <param name="resolution" value="0.05"/>
+        <param name="latch" value="true"/>
+        <param name="map_file" value="$(arg map_file)"/>
+    </node> -->
+</launch>

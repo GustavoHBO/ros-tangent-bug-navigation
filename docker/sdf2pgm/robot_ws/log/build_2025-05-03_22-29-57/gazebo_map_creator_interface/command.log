@@ -1,0 +1,6 @@
+Invoking command in '/root/robot_ws/build/gazebo_map_creator_interface': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /root/robot_ws/src/gazebo_map_creator/gazebo_map_creator_interface -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/root/robot_ws/install/gazebo_map_creator_interface
+Invoked command in '/root/robot_ws/build/gazebo_map_creator_interface' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /root/robot_ws/src/gazebo_map_creator/gazebo_map_creator_interface -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/root/robot_ws/install/gazebo_map_creator_interface
+Invoking command in '/root/robot_ws/build/gazebo_map_creator_interface': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /root/robot_ws/build/gazebo_map_creator_interface -- -j16 -l16
+Invoked command in '/root/robot_ws/build/gazebo_map_creator_interface' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /root/robot_ws/build/gazebo_map_creator_interface -- -j16 -l16
+Invoking command in '/root/robot_ws/build/gazebo_map_creator_interface': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /root/robot_ws/build/gazebo_map_creator_interface
+Invoked command in '/root/robot_ws/build/gazebo_map_creator_interface' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /root/robot_ws/build/gazebo_map_creator_interface

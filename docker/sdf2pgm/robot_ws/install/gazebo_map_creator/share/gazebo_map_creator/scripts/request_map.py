@@ -1,0 +1,1 @@
+/root/robot_ws/src/gazebo_map_creator/gazebo_map_creator/scripts/request_map.py

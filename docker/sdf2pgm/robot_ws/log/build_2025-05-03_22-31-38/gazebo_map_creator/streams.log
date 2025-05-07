@@ -1,0 +1,30 @@
+[0.008s] Invoking command in '/root/robot_ws/build/gazebo_map_creator': AMENT_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble LD_LIBRARY_PATH=/root/robot_ws/install/gazebo_map_creator_interface/lib:${LD_LIBRARY_PATH} PYTHONPATH=/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --build /root/robot_ws/build/gazebo_map_creator -- -j16 -l16
+[0.050s] [35m[1mConsolidate compiler generated dependencies of target gazebo_map_creator[0m
+[0.113s] [100%] Built target gazebo_map_creator
+[0.121s] Invoked command in '/root/robot_ws/build/gazebo_map_creator' returned '0': AMENT_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble LD_LIBRARY_PATH=/root/robot_ws/install/gazebo_map_creator_interface/lib:${LD_LIBRARY_PATH} PYTHONPATH=/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --build /root/robot_ws/build/gazebo_map_creator -- -j16 -l16
+[0.123s] Invoking command in '/root/robot_ws/build/gazebo_map_creator': AMENT_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble LD_LIBRARY_PATH=/root/robot_ws/install/gazebo_map_creator_interface/lib:${LD_LIBRARY_PATH} PYTHONPATH=/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --install /root/robot_ws/build/gazebo_map_creator
+[0.129s] -- Install configuration: ""
+[0.129s] -- Execute custom install script
+[0.129s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/library_path.sh
+[0.129s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/library_path.dsv
+[0.130s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/scripts/request_map.py
+[0.130s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/lib/libgazebo_map_creator.so
+[0.130s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/lib/gazebo_map_creator/request_map.py
+[0.130s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/package_run_dependencies/gazebo_map_creator
+[0.130s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/parent_prefix_path/gazebo_map_creator
+[0.130s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/ament_prefix_path.sh
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/ament_prefix_path.dsv
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/path.sh
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/path.dsv
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.bash
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.sh
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.zsh
+[0.131s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.dsv
+[0.131s] -- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/package.dsv
+[0.138s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/packages/gazebo_map_creator
+[0.138s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/ament_cmake_export_libraries-extras.cmake
+[0.138s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/ament_cmake_export_dependencies-extras.cmake
+[0.139s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/gazebo_map_creatorConfig.cmake
+[0.139s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/gazebo_map_creatorConfig-version.cmake
+[0.139s] -- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/package.xml
+[0.140s] Invoked command in '/root/robot_ws/build/gazebo_map_creator' returned '0': AMENT_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble LD_LIBRARY_PATH=/root/robot_ws/install/gazebo_map_creator_interface/lib:${LD_LIBRARY_PATH} PYTHONPATH=/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/cmake --install /root/robot_ws/build/gazebo_map_creator

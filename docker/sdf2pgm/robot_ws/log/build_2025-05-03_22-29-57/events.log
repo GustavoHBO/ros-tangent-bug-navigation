@@ -1,0 +1,674 @@
+[0.000000] (-) TimerEvent: {}
+[0.000125] (gazebo_map_creator_interface) JobQueued: {'identifier': 'gazebo_map_creator_interface', 'dependencies': OrderedDict()}
+[0.000184] (gazebo_map_creator) JobQueued: {'identifier': 'gazebo_map_creator', 'dependencies': OrderedDict([('gazebo_map_creator_interface', '/root/robot_ws/install/gazebo_map_creator_interface')])}
+[0.000236] (gazebo_map_creator_interface) JobStarted: {'identifier': 'gazebo_map_creator_interface'}
+[0.006363] (gazebo_map_creator_interface) JobProgress: {'identifier': 'gazebo_map_creator_interface', 'progress': 'cmake'}
+[0.006856] (gazebo_map_creator_interface) Command: {'cmd': ['/usr/bin/cmake', '/root/robot_ws/src/gazebo_map_creator/gazebo_map_creator_interface', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/root/robot_ws/install/gazebo_map_creator_interface'], 'cwd': '/root/robot_ws/build/gazebo_map_creator_interface', 'env': OrderedDict([('HOSTNAME', 'timemachine'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/robot_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('QT_X11_NO_MITSHM', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('DISPLAY', ':1'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.docker.xauth'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('PWD', '/root/robot_ws/build/gazebo_map_creator_interface'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.057826] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.099563] (-) TimerEvent: {}
+[0.112724] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.119051] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.185195] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.192035] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.192214] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.192478] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.194633] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.199623] (-) TimerEvent: {}
+[0.264266] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.274665] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.274941] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.275361] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.278565] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.299684] (-) TimerEvent: {}
+[0.399857] (-) TimerEvent: {}
+[0.417095] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.466382] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[0.496637] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found builtin_interfaces: 1.2.1 (/opt/ros/humble/share/builtin_interfaces/cmake)\n'}
+[0.499922] (-) TimerEvent: {}
+[0.525631] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.6 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.530543] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.537850] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.6 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.547745] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.560715] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.574205] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found geometry_msgs: 4.8.0 (/opt/ros/humble/share/geometry_msgs/cmake)\n'}
+[0.594539] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)\n'}
+[0.599989] (-) TimerEvent: {}
+[0.700172] (-) TimerEvent: {}
+[0.800396] (-) TimerEvent: {}
+[0.820002] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake_cppcheck: 0.12.12 (/opt/ros/humble/share/ament_cmake_cppcheck/cmake)\n'}
+[0.822105] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake_cpplint: 0.12.12 (/opt/ros/humble/share/ament_cmake_cpplint/cmake)\n'}
+[0.824122] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake_uncrustify: 0.12.12 (/opt/ros/humble/share/ament_cmake_uncrustify/cmake)\n'}
+[0.827082] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)\n'}
+[0.900468] (-) TimerEvent: {}
+[1.000676] (-) TimerEvent: {}
+[1.100905] (-) TimerEvent: {}
+[1.179517] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.200965] (-) TimerEvent: {}
+[1.301131] (-) TimerEvent: {}
+[1.308743] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[1.328076] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") \n'}
+[1.330364] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)\n'}
+[1.354571] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") \n'}
+[1.354763] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using PYTHON_EXECUTABLE: /usr/bin/python3\n'}
+[1.354873] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10\n'}
+[1.354972] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so\n'}
+[1.372542] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found PythonExtra: .so  \n'}
+[1.401207] (-) TimerEvent: {}
+[1.433186] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake_flake8: 0.12.12 (/opt/ros/humble/share/ament_cmake_flake8/cmake)\n'}
+[1.435293] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Found ament_cmake_pep257: 0.12.12 (/opt/ros/humble/share/ament_cmake_pep257/cmake)\n'}
+[1.445348] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Configuring done\n'}
+[1.473987] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Generating done\n'}
+[1.482029] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Build files have been written to: /root/robot_ws/build/gazebo_map_creator_interface\n'}
+[1.488066] (gazebo_map_creator_interface) CommandEnded: {'returncode': 0}
+[1.488419] (gazebo_map_creator_interface) JobProgress: {'identifier': 'gazebo_map_creator_interface', 'progress': 'build'}
+[1.489056] (gazebo_map_creator_interface) Command: {'cmd': ['/usr/bin/cmake', '--build', '/root/robot_ws/build/gazebo_map_creator_interface', '--', '-j16', '-l16'], 'cwd': '/root/robot_ws/build/gazebo_map_creator_interface', 'env': OrderedDict([('HOSTNAME', 'timemachine'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/robot_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('QT_X11_NO_MITSHM', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('DISPLAY', ':1'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.docker.xauth'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('PWD', '/root/robot_ws/build/gazebo_map_creator_interface'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[1.501274] (-) TimerEvent: {}
+[1.526284] (gazebo_map_creator_interface) StdoutLine: {'line': b'[  3%] \x1b[34m\x1b[1mGenerating C code for ROS interfaces\x1b[0m\n'}
+[1.535587] (gazebo_map_creator_interface) StdoutLine: {'line': b'[  6%] \x1b[34m\x1b[1mGenerating C++ code for ROS interfaces\x1b[0m\n'}
+[1.541594] (gazebo_map_creator_interface) StdoutLine: {'line': b'[  6%] Built target ament_cmake_python_symlink_gazebo_map_creator_interface\n'}
+[1.601364] (-) TimerEvent: {}
+[1.696177] (gazebo_map_creator_interface) StdoutLine: {'line': b'running egg_info\n'}
+[1.696540] (gazebo_map_creator_interface) StdoutLine: {'line': b'creating gazebo_map_creator_interface.egg-info\n'}
+[1.696651] (gazebo_map_creator_interface) StdoutLine: {'line': b'writing gazebo_map_creator_interface.egg-info/PKG-INFO\n'}
+[1.696760] (gazebo_map_creator_interface) StdoutLine: {'line': b'writing dependency_links to gazebo_map_creator_interface.egg-info/dependency_links.txt\n'}
+[1.696867] (gazebo_map_creator_interface) StdoutLine: {'line': b'writing top-level names to gazebo_map_creator_interface.egg-info/top_level.txt\n'}
+[1.696961] (gazebo_map_creator_interface) StdoutLine: {'line': b"writing manifest file 'gazebo_map_creator_interface.egg-info/SOURCES.txt'\n"}
+[1.698091] (gazebo_map_creator_interface) StdoutLine: {'line': b"reading manifest file 'gazebo_map_creator_interface.egg-info/SOURCES.txt'\n"}
+[1.698462] (gazebo_map_creator_interface) StdoutLine: {'line': b"writing manifest file 'gazebo_map_creator_interface.egg-info/SOURCES.txt'\n"}
+[1.701421] (-) TimerEvent: {}
+[1.715568] (gazebo_map_creator_interface) StdoutLine: {'line': b'[  6%] Built target ament_cmake_python_build_gazebo_map_creator_interface_egg\n'}
+[1.774457] (gazebo_map_creator_interface) StdoutLine: {'line': b'[  9%] \x1b[32mBuilding C object CMakeFiles/gazebo_map_creator_interface__rosidl_generator_c.dir/rosidl_generator_c/gazebo_map_creator_interface/srv/detail/map_request__functions.c.o\x1b[0m\n'}
+[1.782722] (gazebo_map_creator_interface) StdoutLine: {'line': b'[  9%] Built target gazebo_map_creator_interface__cpp\n'}
+[1.790954] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 19%] \x1b[34m\x1b[1mGenerating C++ type support for eProsima Fast-RTPS\x1b[0m\n'}
+[1.791095] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 19%] \x1b[34m\x1b[1mGenerating C++ type support dispatch for ROS interfaces\x1b[0m\n'}
+[1.791176] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 19%] \x1b[34m\x1b[1mGenerating C++ introspection for ROS interfaces\x1b[0m\n'}
+[1.801496] (-) TimerEvent: {}
+[1.823598] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 22%] \x1b[32m\x1b[1mLinking C shared library libgazebo_map_creator_interface__rosidl_generator_c.so\x1b[0m\n'}
+[1.854569] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 22%] Built target gazebo_map_creator_interface__rosidl_generator_c\n'}
+[1.862403] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 25%] \x1b[34m\x1b[1mGenerating C type support dispatch for ROS interfaces\x1b[0m\n'}
+[1.862713] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 29%] \x1b[34m\x1b[1mGenerating C type support for eProsima Fast-RTPS\x1b[0m\n'}
+[1.862809] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 32%] \x1b[34m\x1b[1mGenerating C introspection for ROS interfaces\x1b[0m\n'}
+[1.901590] (-) TimerEvent: {}
+[2.001833] (-) TimerEvent: {}
+[2.005620] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 35%] \x1b[32mBuilding CXX object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/gazebo_map_creator_interface/srv/map_request__type_support.cpp.o\x1b[0m\n'}
+[2.024073] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 38%] \x1b[32mBuilding CXX object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/gazebo_map_creator_interface/srv/detail/map_request__type_support.cpp.o\x1b[0m\n'}
+[2.026525] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 41%] \x1b[32mBuilding CXX object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/gazebo_map_creator_interface/srv/detail/dds_fastrtps/map_request__type_support.cpp.o\x1b[0m\n'}
+[2.086479] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 45%] \x1b[32mBuilding CXX object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_c.dir/rosidl_typesupport_c/gazebo_map_creator_interface/srv/map_request__type_support.cpp.o\x1b[0m\n'}
+[2.093332] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 48%] \x1b[32mBuilding C object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/gazebo_map_creator_interface/srv/detail/map_request__type_support.c.o\x1b[0m\n'}
+[2.100385] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 51%] \x1b[32mBuilding CXX object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/gazebo_map_creator_interface/srv/detail/map_request__type_support_c.cpp.o\x1b[0m\n'}
+[2.101895] (-) TimerEvent: {}
+[2.113763] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 54%] \x1b[32m\x1b[1mLinking CXX shared library libgazebo_map_creator_interface__rosidl_typesupport_c.so\x1b[0m\n'}
+[2.132038] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 58%] \x1b[32m\x1b[1mLinking C shared library libgazebo_map_creator_interface__rosidl_typesupport_introspection_c.so\x1b[0m\n'}
+[2.152881] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 58%] Built target gazebo_map_creator_interface__rosidl_typesupport_c\n'}
+[2.159346] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 58%] Built target gazebo_map_creator_interface__rosidl_typesupport_introspection_c\n'}
+[2.202017] (-) TimerEvent: {}
+[2.202256] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 61%] \x1b[32m\x1b[1mLinking CXX shared library libgazebo_map_creator_interface__rosidl_typesupport_cpp.so\x1b[0m\n'}
+[2.238197] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 61%] Built target gazebo_map_creator_interface__rosidl_typesupport_cpp\n'}
+[2.298848] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 64%] \x1b[32m\x1b[1mLinking CXX shared library libgazebo_map_creator_interface__rosidl_typesupport_introspection_cpp.so\x1b[0m\n'}
+[2.302082] (-) TimerEvent: {}
+[2.351844] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 64%] Built target gazebo_map_creator_interface__rosidl_typesupport_introspection_cpp\n'}
+[2.362048] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 67%] \x1b[32m\x1b[1mLinking CXX shared library libgazebo_map_creator_interface__rosidl_typesupport_fastrtps_cpp.so\x1b[0m\n'}
+[2.402197] (-) TimerEvent: {}
+[2.404153] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 70%] \x1b[32m\x1b[1mLinking CXX shared library libgazebo_map_creator_interface__rosidl_typesupport_fastrtps_c.so\x1b[0m\n'}
+[2.414051] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 70%] Built target gazebo_map_creator_interface__rosidl_typesupport_fastrtps_cpp\n'}
+[2.463317] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 70%] Built target gazebo_map_creator_interface__rosidl_typesupport_fastrtps_c\n'}
+[2.483304] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 70%] Built target gazebo_map_creator_interface\n'}
+[2.502292] (-) TimerEvent: {}
+[2.506848] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 74%] \x1b[34m\x1b[1mGenerating Python code for ROS interfaces\x1b[0m\n'}
+[2.602376] (-) TimerEvent: {}
+[2.702586] (-) TimerEvent: {}
+[2.802791] (-) TimerEvent: {}
+[2.859627] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 74%] Built target gazebo_map_creator_interface__py\n'}
+[2.877377] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 77%] \x1b[32mBuilding C object CMakeFiles/gazebo_map_creator_interface__rosidl_generator_py.dir/rosidl_generator_py/gazebo_map_creator_interface/srv/_map_request_s.c.o\x1b[0m\n'}
+[2.902863] (-) TimerEvent: {}
+[2.970295] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 80%] \x1b[32m\x1b[1mLinking C shared library rosidl_generator_py/gazebo_map_creator_interface/libgazebo_map_creator_interface__rosidl_generator_py.so\x1b[0m\n'}
+[2.999720] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 80%] Built target gazebo_map_creator_interface__rosidl_generator_py\n'}
+[3.002943] (-) TimerEvent: {}
+[3.020421] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 87%] \x1b[32mBuilding C object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/gazebo_map_creator_interface/_gazebo_map_creator_interface_s.ep.rosidl_typesupport_fastrtps_c.c.o\x1b[0m\n'}
+[3.020614] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 87%] \x1b[32mBuilding C object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/gazebo_map_creator_interface/_gazebo_map_creator_interface_s.ep.rosidl_typesupport_c.c.o\x1b[0m\n'}
+[3.020718] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 90%] \x1b[32mBuilding C object CMakeFiles/gazebo_map_creator_interface__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/gazebo_map_creator_interface/_gazebo_map_creator_interface_s.ep.rosidl_typesupport_introspection_c.c.o\x1b[0m\n'}
+[3.095481] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 93%] \x1b[32m\x1b[1mLinking C shared library rosidl_generator_py/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so\x1b[0m\n'}
+[3.095711] (gazebo_map_creator_interface) StdoutLine: {'line': b'[ 96%] \x1b[32m\x1b[1mLinking C shared library rosidl_generator_py/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so\x1b[0m\n'}
+[3.095822] (gazebo_map_creator_interface) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking C shared library rosidl_generator_py/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so\x1b[0m\n'}
+[3.103029] (-) TimerEvent: {}
+[3.132451] (gazebo_map_creator_interface) StdoutLine: {'line': b'[100%] Built target gazebo_map_creator_interface__rosidl_typesupport_introspection_c__pyext\n'}
+[3.132669] (gazebo_map_creator_interface) StdoutLine: {'line': b'[100%] Built target gazebo_map_creator_interface__rosidl_typesupport_c__pyext\n'}
+[3.133856] (gazebo_map_creator_interface) StdoutLine: {'line': b'[100%] Built target gazebo_map_creator_interface__rosidl_typesupport_fastrtps_c__pyext\n'}
+[3.147300] (gazebo_map_creator_interface) CommandEnded: {'returncode': 0}
+[3.147915] (gazebo_map_creator_interface) JobProgress: {'identifier': 'gazebo_map_creator_interface', 'progress': 'install'}
+[3.157007] (gazebo_map_creator_interface) Command: {'cmd': ['/usr/bin/cmake', '--install', '/root/robot_ws/build/gazebo_map_creator_interface'], 'cwd': '/root/robot_ws/build/gazebo_map_creator_interface', 'env': OrderedDict([('HOSTNAME', 'timemachine'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/robot_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('QT_X11_NO_MITSHM', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('DISPLAY', ':1'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.docker.xauth'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('PWD', '/root/robot_ws/build/gazebo_map_creator_interface'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[3.164116] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[3.164553] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Execute custom install script\n'}
+[3.164793] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/ament_index/resource_index/rosidl_interfaces/gazebo_map_creator_interface\n'}
+[3.172927] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/msg/rosidl_generator_c__visibility_control.h\n'}
+[3.183234] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__functions.h\n'}
+[3.190743] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__struct.h\n'}
+[3.200989] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__type_support.h\n'}
+[3.203091] (-) TimerEvent: {}
+[3.208607] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/map_request.h\n'}
+[3.219729] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/library_path.sh\n'}
+[3.225420] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/library_path.dsv\n'}
+[3.231894] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/msg/rosidl_typesupport_fastrtps_c__visibility_control.h\n'}
+[3.237288] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__rosidl_typesupport_fastrtps_c.h\n'}
+[3.245564] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/msg/rosidl_generator_cpp__visibility_control.hpp\n'}
+[3.250984] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__builder.hpp\n'}
+[3.258758] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__struct.hpp\n'}
+[3.267300] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__traits.hpp\n'}
+[3.273837] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__type_support.hpp\n'}
+[3.281569] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/map_request.hpp\n'}
+[3.290075] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h\n'}
+[3.295443] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__rosidl_typesupport_fastrtps_cpp.hpp\n'}
+[3.303157] (-) TimerEvent: {}
+[3.303848] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/msg/rosidl_typesupport_introspection_c__visibility_control.h\n'}
+[3.312048] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__rosidl_typesupport_introspection_c.h\n'}
+[3.323182] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/include/gazebo_map_creator_interface/gazebo_map_creator_interface/srv/detail/map_request__rosidl_typesupport_introspection_cpp.hpp\n'}
+[3.328944] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/pythonpath.sh\n'}
+[3.335061] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/pythonpath.dsv\n'}
+[3.342177] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface-3.5.3-py3.10.egg-info/PKG-INFO\n'}
+[3.347313] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface-3.5.3-py3.10.egg-info/SOURCES.txt\n'}
+[3.355041] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface-3.5.3-py3.10.egg-info/dependency_links.txt\n'}
+[3.361463] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface-3.5.3-py3.10.egg-info/top_level.txt\n'}
+[3.371755] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/__init__.py\n'}
+[3.380287] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/_gazebo_map_creator_interface_s.ep.rosidl_typesupport_c.c\n'}
+[3.390073] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/_gazebo_map_creator_interface_s.ep.rosidl_typesupport_fastrtps_c.c\n'}
+[3.399476] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/_gazebo_map_creator_interface_s.ep.rosidl_typesupport_introspection_c.c\n'}
+[3.403228] (-) TimerEvent: {}
+[3.407973] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so\n'}
+[3.418782] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so\n'}
+[3.425841] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so\n'}
+[3.431050] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/libgazebo_map_creator_interface__rosidl_generator_py.so\n'}
+[3.439081] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/srv/__init__.py\n'}
+[3.447022] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/srv/_map_request.py\n'}
+[3.452408] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/srv/_map_request_s.c\n'}
+[3.460555] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_fastrtps_c.cpython-310-x86_64-linux-gnu.so\n'}
+[3.460926] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_introspection_c.cpython-310-x86_64-linux-gnu.so\n'}
+[3.461308] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Up-to-date symlink: /root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/gazebo_map_creator_interface_s__rosidl_typesupport_c.cpython-310-x86_64-linux-gnu.so\n'}
+[3.461580] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/srv/MapRequest.idl\n'}
+[3.470097] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/srv/MapRequest.srv\n'}
+[3.479035] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/srv/MapRequest_Request.msg\n'}
+[3.487008] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/srv/MapRequest_Response.msg\n'}
+[3.493284] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/ament_index/resource_index/package_run_dependencies/gazebo_map_creator_interface\n'}
+[3.501905] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/ament_index/resource_index/parent_prefix_path/gazebo_map_creator_interface\n'}
+[3.503296] (-) TimerEvent: {}
+[3.509895] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/ament_prefix_path.sh\n'}
+[3.520862] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/ament_prefix_path.dsv\n'}
+[3.526980] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/path.sh\n'}
+[3.533395] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/environment/path.dsv\n'}
+[3.543105] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/local_setup.bash\n'}
+[3.553331] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/local_setup.sh\n'}
+[3.558720] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/local_setup.zsh\n'}
+[3.566753] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/local_setup.dsv\n'}
+[3.576090] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/package.dsv\n'}
+[3.581754] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/ament_index/resource_index/packages/gazebo_map_creator_interface\n'}
+[3.589804] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/rosidl_cmake-extras.cmake\n'}
+[3.598168] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/ament_cmake_export_dependencies-extras.cmake\n'}
+[3.603367] (-) TimerEvent: {}
+[3.606552] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/ament_cmake_export_include_directories-extras.cmake\n'}
+[3.612885] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/ament_cmake_export_libraries-extras.cmake\n'}
+[3.619798] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/ament_cmake_export_targets-extras.cmake\n'}
+[3.625393] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake\n'}
+[3.632764] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake\n'}
+[3.641405] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interfaceConfig.cmake\n'}
+[3.651383] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interfaceConfig-version.cmake\n'}
+[3.658204] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/package.xml\n'}
+[3.668466] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_generator_c.so\n'}
+[3.669142] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_generator_c.so" to ""\n'}
+[3.669258] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_fastrtps_c.so\n'}
+[3.669746] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_fastrtps_c.so" to ""\n'}
+[3.669864] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_fastrtps_cpp.so\n'}
+[3.670371] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_fastrtps_cpp.so" to ""\n'}
+[3.670492] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_introspection_c.so\n'}
+[3.670951] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_introspection_c.so" to ""\n'}
+[3.671070] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_c.so\n'}
+[3.671480] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_c.so" to ""\n'}
+[3.671592] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_introspection_cpp.so\n'}
+[3.672060] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_introspection_cpp.so" to ""\n'}
+[3.672171] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_cpp.so\n'}
+[3.672598] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_typesupport_cpp.so" to ""\n'}
+[3.699351] (gazebo_map_creator_interface) StdoutLine: {'line': b"Listing '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface'...\n"}
+[3.699438] (gazebo_map_creator_interface) StdoutLine: {'line': b"Compiling '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/__init__.py'...\n"}
+[3.699507] (gazebo_map_creator_interface) StdoutLine: {'line': b"Listing '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/srv'...\n"}
+[3.699558] (gazebo_map_creator_interface) StdoutLine: {'line': b"Compiling '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/srv/__init__.py'...\n"}
+[3.699607] (gazebo_map_creator_interface) StdoutLine: {'line': b"Compiling '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages/gazebo_map_creator_interface/srv/_map_request.py'...\n"}
+[3.702027] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_generator_py.so\n'}
+[3.702533] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Set runtime path of "/root/robot_ws/install/gazebo_map_creator_interface/lib/libgazebo_map_creator_interface__rosidl_generator_py.so" to ""\n'}
+[3.702652] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_generator_cExport.cmake\n'}
+[3.702885] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_generator_cExport-noconfig.cmake\n'}
+[3.703121] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_typesupport_fastrtps_cExport.cmake\n'}
+[3.703353] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_typesupport_fastrtps_cExport-noconfig.cmake\n'}
+[3.703446] (-) TimerEvent: {}
+[3.703622] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_generator_cppExport.cmake\n'}
+[3.703858] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_typesupport_fastrtps_cppExport.cmake\n'}
+[3.704142] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake\n'}
+[3.704449] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_introspection_cExport.cmake\n'}
+[3.704743] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_introspection_cExport-noconfig.cmake\n'}
+[3.705026] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_cExport.cmake\n'}
+[3.705255] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_cExport-noconfig.cmake\n'}
+[3.705492] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_introspection_cppExport.cmake\n'}
+[3.705722] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_introspection_cppExport-noconfig.cmake\n'}
+[3.705978] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_cppExport.cmake\n'}
+[3.706280] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/gazebo_map_creator_interface__rosidl_typesupport_cppExport-noconfig.cmake\n'}
+[3.706577] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_generator_pyExport.cmake\n'}
+[3.706870] (gazebo_map_creator_interface) StdoutLine: {'line': b'-- Installing: /root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake/export_gazebo_map_creator_interface__rosidl_generator_pyExport-noconfig.cmake\n'}
+[3.709504] (gazebo_map_creator_interface) CommandEnded: {'returncode': 0}
+[3.728160] (gazebo_map_creator_interface) JobEnded: {'identifier': 'gazebo_map_creator_interface', 'rc': 0}
+[3.728864] (gazebo_map_creator) JobStarted: {'identifier': 'gazebo_map_creator'}
+[3.734622] (gazebo_map_creator) JobProgress: {'identifier': 'gazebo_map_creator', 'progress': 'cmake'}
+[3.735122] (gazebo_map_creator) Command: {'cmd': ['/usr/bin/cmake', '/root/robot_ws/src/gazebo_map_creator/gazebo_map_creator', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/root/robot_ws/install/gazebo_map_creator'], 'cwd': '/root/robot_ws/build/gazebo_map_creator', 'env': OrderedDict([('HOSTNAME', 'timemachine'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/root/robot_ws/install/gazebo_map_creator_interface/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/robot_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('QT_X11_NO_MITSHM', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('DISPLAY', ':1'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.docker.xauth'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('PWD', '/root/robot_ws/build/gazebo_map_creator'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble')]), 'shell': False}
+[3.785140] (gazebo_map_creator) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[3.803524] (-) TimerEvent: {}
+[3.836320] (gazebo_map_creator) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[3.843238] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[3.903623] (-) TimerEvent: {}
+[3.912592] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[3.920942] (gazebo_map_creator) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[3.921110] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[3.921372] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[3.923612] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[3.991889] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[3.999951] (gazebo_map_creator) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[4.000154] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[4.000465] (gazebo_map_creator) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[4.003199] (gazebo_map_creator) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.11 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[4.003674] (-) TimerEvent: {}
+[4.103841] (-) TimerEvent: {}
+[4.132443] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[4.181598] (gazebo_map_creator) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[4.203917] (-) TimerEvent: {}
+[4.221490] (gazebo_map_creator) StdoutLine: {'line': b'-- Found builtin_interfaces: 1.2.1 (/opt/ros/humble/share/builtin_interfaces/cmake)\n'}
+[4.248155] (gazebo_map_creator) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.6 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[4.252576] (gazebo_map_creator) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.6 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[4.259478] (gazebo_map_creator) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.6 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[4.268761] (gazebo_map_creator) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[4.281379] (gazebo_map_creator) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[4.295452] (gazebo_map_creator) StdoutLine: {'line': b'-- Found gazebo_dev: 3.9.0 (/opt/ros/humble/share/gazebo_dev/cmake)\n'}
+[4.300919] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2") \n'}
+[4.301479] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'bullet>=2.82'\n"}
+[4.303979] (-) TimerEvent: {}
+[4.313648] (gazebo_map_creator) StdoutLine: {'line': b'--   Found bullet, version 3.05\n'}
+[4.404089] (-) TimerEvent: {}
+[4.424179] (gazebo_map_creator) StdoutLine: {'line': b'-- Found fcl: /usr/include (found suitable version "0.7.0", minimum required is "0.5.0") \n'}
+[4.473562] (gazebo_map_creator) StdoutLine: {'line': b'-- Found assimp: /usr/include (found version "5.2.0") \n'}
+[4.496610] (gazebo_map_creator) StdoutLine: {'line': b'-- Found DART: /usr/include (Required is at least version "6.6") found components: dart \n'}
+[4.504144] (-) TimerEvent: {}
+[4.604327] (-) TimerEvent: {}
+[4.672519] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found suitable version "1.74.0", minimum required is "1.40.0") found components: thread system filesystem program_options regex iostreams date_time \n'}
+[4.683097] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Protobuf: /usr/lib/x86_64-linux-gnu/libprotobuf.so (found version "3.12.4") \n'}
+[4.690750] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-math6 -- found version 6.15.1\n'}
+[4.697610] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for dependencies of ignition-math6\n'}
+[4.698612] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE...\n'}
+[4.698884] (gazebo_map_creator) StdoutLine: {'line': b'-- OGRE_PREFIX_WATCH changed.\n'}
+[4.702312] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'OGRE'\n"}
+[4.704380] (-) TimerEvent: {}
+[4.713394] (gazebo_map_creator) StdoutLine: {'line': b'--   Found OGRE, version 1.9.0\n'}
+[4.744976] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Ogre Ghadamon (1.9.0)\n'}
+[4.754580] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE: optimized;/usr/lib/x86_64-linux-gnu/libOgreMain.so;debug;/usr/lib/x86_64-linux-gnu/libOgreMain.so\n'}
+[4.761625] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE_Paging...\n'}
+[4.764009] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE_Paging: optimized;/usr/lib/x86_64-linux-gnu/libOgrePaging.so;debug;/usr/lib/x86_64-linux-gnu/libOgrePaging.so\n'}
+[4.764087] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE_Terrain...\n'}
+[4.766421] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE_Terrain: optimized;/usr/lib/x86_64-linux-gnu/libOgreTerrain.so;debug;/usr/lib/x86_64-linux-gnu/libOgreTerrain.so\n'}
+[4.766501] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE_Property...\n'}
+[4.769052] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE_Property: optimized;/usr/lib/x86_64-linux-gnu/libOgreProperty.so;debug;/usr/lib/x86_64-linux-gnu/libOgreProperty.so\n'}
+[4.769137] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE_RTShaderSystem...\n'}
+[4.771450] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE_RTShaderSystem: optimized;/usr/lib/x86_64-linux-gnu/libOgreRTShaderSystem.so;debug;/usr/lib/x86_64-linux-gnu/libOgreRTShaderSystem.so\n'}
+[4.771537] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE_Volume...\n'}
+[4.773898] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE_Volume: optimized;/usr/lib/x86_64-linux-gnu/libOgreVolume.so;debug;/usr/lib/x86_64-linux-gnu/libOgreVolume.so\n'}
+[4.773976] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for OGRE_Overlay...\n'}
+[4.776285] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OGRE_Overlay: optimized;/usr/lib/x86_64-linux-gnu/libOgreOverlay.so;debug;/usr/lib/x86_64-linux-gnu/libOgreOverlay.so\n'}
+[4.804461] (-) TimerEvent: {}
+[4.837099] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-math6 -- found version 6.15.1\n'}
+[4.839293] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-transport8 -- found version 8.2.1\n'}
+[4.839656] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for dependencies of ignition-transport8\n'}
+[4.857458] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Protobuf: /usr/lib/x86_64-linux-gnu/libprotobuf.so (found suitable version "3.12.4", minimum required is "3") \n'}
+[4.872640] (gazebo_map_creator) StdoutLine: {'line': b'-- Config-file not installed for ZeroMQ -- checking for pkg-config\n'}
+[4.876641] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'libzmq >= 4'\n"}
+[4.890149] (gazebo_map_creator) StdoutLine: {'line': b'--   Found libzmq , version 4.3.4\n'}
+[4.904547] (-) TimerEvent: {}
+[4.929677] (gazebo_map_creator) StdoutLine: {'line': b'-- Found ZeroMQ: TRUE (Required is at least version "4") \n'}
+[4.933738] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'uuid'\n"}
+[4.945816] (gazebo_map_creator) StdoutLine: {'line': b'--   Found uuid, version 2.37.2\n'}
+[4.978546] (gazebo_map_creator) StdoutLine: {'line': b'-- Found UUID: TRUE  \n'}
+[4.982220] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-msgs5 -- found version 5.8.1\n'}
+[4.982825] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for dependencies of ignition-msgs5\n'}
+[5.004611] (-) TimerEvent: {}
+[5.005590] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-math6 -- found version 6.15.1\n'}
+[5.009335] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'tinyxml2'\n"}
+[5.024286] (gazebo_map_creator) StdoutLine: {'line': b'--   Found tinyxml2, version 9.0.0\n'}
+[5.059270] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-msgs5 -- found version 5.8.1\n'}
+[5.062928] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-common3 -- found version 3.14.0\n'}
+[5.063501] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for dependencies of ignition-common3\n'}
+[5.063852] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for dlfcn.h - found\n'}
+[5.064410] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for libdl - found\n'}
+[5.065943] (gazebo_map_creator) StdoutLine: {'line': b'-- Found DL: TRUE  \n'}
+[5.074838] (gazebo_map_creator) StdoutLine: {'line': b'-- Found tinyobjloader: /usr/lib/x86_64-linux-gnu/cmake/tinyobjloader/tinyobjloader-config.cmake (found version "2.0.0") \n'}
+[5.075203] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for <ignition-common3> component [graphics]\n'}
+[5.077332] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-common3-graphics -- found version 3.14.0\n'}
+[5.077699] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for dependencies of ignition-common3-graphics\n'}
+[5.077953] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-math6 -- found version 6.15.1\n'}
+[5.080545] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-fuel_tools4 -- found version 4.4.0\n'}
+[5.080867] (gazebo_map_creator) StdoutLine: {'line': b'-- Searching for dependencies of ignition-fuel_tools4\n'}
+[5.104678] (-) TimerEvent: {}
+[5.154316] (gazebo_map_creator) StdoutLine: {'line': b'-- Found CURL: /usr/lib/x86_64-linux-gnu/libcurl.so (found version "7.81.0")  \n'}
+[5.165119] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'jsoncpp'\n"}
+[5.179384] (gazebo_map_creator) StdoutLine: {'line': b'--   Found jsoncpp, version 1.9.5\n'}
+[5.204754] (-) TimerEvent: {}
+[5.220598] (gazebo_map_creator) StdoutLine: {'line': b'-- Found JSONCPP: TRUE  \n'}
+[5.226155] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'libzip'\n"}
+[5.236785] (gazebo_map_creator) StdoutLine: {'line': b'--   Found libzip, version 1.7.3\n'}
+[5.274689] (gazebo_map_creator) StdoutLine: {'line': b'-- Found ZIP: TRUE  \n'}
+[5.275211] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-common3 -- found version 3.14.0\n'}
+[5.275716] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-math6 -- found version 6.15.1\n'}
+[5.276202] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for ignition-msgs5 -- found version 5.8.1\n'}
+[5.281151] (gazebo_map_creator) StdoutLine: {'line': b'-- Gazebo version: 11.10\n'}
+[5.281493] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'tbb'\n"}
+[5.295968] (gazebo_map_creator) StdoutLine: {'line': b'--   Found tbb, version 2021.5.0\n'}
+[5.304840] (-) TimerEvent: {}
+[5.332547] (gazebo_map_creator) StdoutLine: {'line': b'-- Found gazebo_ros: 3.9.0 (/opt/ros/humble/share/gazebo_ros/cmake)\n'}
+[5.375267] (gazebo_map_creator) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[5.378416] (gazebo_map_creator) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.7 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[5.404904] (-) TimerEvent: {}
+[5.471206] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[5.503132] (gazebo_map_creator) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[5.504967] (-) TimerEvent: {}
+[5.544762] (gazebo_map_creator) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[5.553454] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[5.594561] (gazebo_map_creator) StdoutLine: {'line': b'-- Found geometry_msgs: 4.8.0 (/opt/ros/humble/share/geometry_msgs/cmake)\n'}
+[5.603087] (gazebo_map_creator) StdoutLine: {'line': b'-- Found gazebo_map_creator_interface: 3.5.3 (/root/robot_ws/install/gazebo_map_creator_interface/share/gazebo_map_creator_interface/cmake)\n'}
+[5.605030] (-) TimerEvent: {}
+[5.616291] (gazebo_map_creator) StdoutLine: {'line': b'-- Found rclpy: 3.3.16 (/opt/ros/humble/share/rclpy/cmake)\n'}
+[5.627609] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'eigen3'\n"}
+[5.638087] (gazebo_map_creator) StdoutLine: {'line': b'--   Found eigen3, version 3.4.0\n'}
+[5.671723] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Eigen: /usr/include/eigen3 (Required is at least version "3.1") \n'}
+[5.671861] (gazebo_map_creator) StdoutLine: {'line': b'-- Eigen found (include: /usr/include/eigen3, version: 3.4.0)\n'}
+[5.682028] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Boost: /usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0/BoostConfig.cmake (found suitable version "1.74.0", minimum required is "1.65.0") found components: system filesystem date_time iostreams serialization \n'}
+[5.697784] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'flann'\n"}
+[5.705106] (-) TimerEvent: {}
+[5.711216] (gazebo_map_creator) StdoutLine: {'line': b'--   Found flann, version 1.9.1\n'}
+[5.750754] (gazebo_map_creator) StdoutLine: {'line': b'-- Found FLANN: /usr/lib/x86_64-linux-gnu/libflann_cpp.so  \n'}
+[5.750935] (gazebo_map_creator) StdoutLine: {'line': b'-- FLANN found (include: /usr/include, lib: /usr/lib/x86_64-linux-gnu/libflann_cpp.so)\n'}
+[5.778121] (gazebo_map_creator) StdoutLine: {'line': b'-- Found GLEW: /usr/lib/x86_64-linux-gnu/libGLEW.so  \n'}
+[5.781175] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OpenGL: /usr/lib/x86_64-linux-gnu/libOpenGL.so  found components: OpenGL GLX \n'}
+[5.805186] (-) TimerEvent: {}
+[5.905425] (-) TimerEvent: {}
+[5.924700] (gazebo_map_creator) StdoutLine: {'line': b'-- Found MPI_C: /usr/lib/x86_64-linux-gnu/libmpi.so (found version "3.1") \n'}
+[5.924915] (gazebo_map_creator) StdoutLine: {'line': b'-- Found MPI: TRUE (found version "3.1") found components: C \n'}
+[5.926929] (gazebo_map_creator) StdoutLine: {'line': b'-- Found JsonCpp: /usr/lib/x86_64-linux-gnu/libjsoncpp.so (found suitable version "1.9.5", minimum required is "0.7.0") \n'}
+[5.935089] (gazebo_map_creator) StdoutLine: {'line': b'-- Found ZLIB: /usr/lib/x86_64-linux-gnu/libz.so (found version "1.2.11") \n'}
+[5.945891] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PNG: /usr/lib/x86_64-linux-gnu/libpng.so (found version "1.6.37") \n'}
+[5.955652] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Eigen3: /usr/include/eigen3 (found version "3.4.0") \n'}
+[6.005519] (-) TimerEvent: {}
+[6.025544] (gazebo_map_creator) StdoutLine: {'line': b'-- Found X11: /usr/include   \n'}
+[6.025797] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for XOpenDisplay in /usr/lib/x86_64-linux-gnu/libX11.so;/usr/lib/x86_64-linux-gnu/libXext.so\n'}
+[6.086822] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for XOpenDisplay in /usr/lib/x86_64-linux-gnu/libX11.so;/usr/lib/x86_64-linux-gnu/libXext.so - found\n'}
+[6.087006] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for gethostbyname\n'}
+[6.105613] (-) TimerEvent: {}
+[6.147465] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for gethostbyname - found\n'}
+[6.147634] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for connect\n'}
+[6.205069] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for connect - found\n'}
+[6.205265] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for remove\n'}
+[6.205670] (-) TimerEvent: {}
+[6.265335] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for remove - found\n'}
+[6.265553] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for shmat\n'}
+[6.305766] (-) TimerEvent: {}
+[6.322543] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for shmat - found\n'}
+[6.322750] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for IceConnectionNumber in ICE\n'}
+[6.379343] (gazebo_map_creator) StdoutLine: {'line': b'-- Looking for IceConnectionNumber in ICE - found\n'}
+[6.405852] (-) TimerEvent: {}
+[6.443354] (gazebo_map_creator) StdoutLine: {'line': b'-- Found EXPAT: /usr/lib/x86_64-linux-gnu/libexpat.so (found version "2.4.7") \n'}
+[6.444733] (gazebo_map_creator) StdoutLine: {'line': b'-- Found double-conversion: /usr/lib/x86_64-linux-gnu/libdouble-conversion.so  \n'}
+[6.446461] (gazebo_map_creator) StdoutLine: {'line': b'-- Found LZ4: /usr/lib/x86_64-linux-gnu/liblz4.so (found version "1.9.3") \n'}
+[6.447673] (gazebo_map_creator) StdoutLine: {'line': b'-- Found LZMA: /usr/lib/x86_64-linux-gnu/liblzma.so (found version "5.2.5") \n'}
+[6.460076] (gazebo_map_creator) StdoutLine: {'line': b'-- Found JPEG: /usr/lib/x86_64-linux-gnu/libjpeg.so (found version "80") \n'}
+[6.463296] (gazebo_map_creator) StdoutLine: {'line': b'-- Found TIFF: /usr/lib/x86_64-linux-gnu/libtiff.so (found version "4.3.0")  \n'}
+[6.466090] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Freetype: /usr/lib/x86_64-linux-gnu/libfreetype.so (found version "2.11.1") \n'}
+[6.469852] (gazebo_map_creator) StdoutLine: {'line': b'-- Found utf8cpp: /usr/include/utf8cpp  \n'}
+[6.505950] (-) TimerEvent: {}
+[6.536735] (gazebo_map_creator) StdoutLine: {'line': b"-- Checking for module 'libusb-1.0'\n"}
+[6.548782] (gazebo_map_creator) StdoutLine: {'line': b'--   Found libusb-1.0, version 1.0.25\n'}
+[6.581354] (gazebo_map_creator) StdoutLine: {'line': b'-- Found libusb: /usr/lib/x86_64-linux-gnu/libusb-1.0.so  \n'}
+[6.582453] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OpenNI: /usr/lib/libOpenNI.so;libusb::libusb (found version "1.5.4.0") \n'}
+[6.582539] (gazebo_map_creator) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[6.606040] (-) TimerEvent: {}
+[6.635339] (gazebo_map_creator) StdoutLine: {'line': b'-- Found OpenNI2: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb (found version "2.2.0.33") \n'}
+[6.635521] (gazebo_map_creator) StdoutLine: {'line': b'-- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)\n'}
+[6.635645] (gazebo_map_creator) StderrLine: {'line': b'\x1b[0m** WARNING ** io features related to pcap will be disabled\x1b[0m\n'}
+[6.706107] (-) TimerEvent: {}
+[6.745348] (gazebo_map_creator) StdoutLine: {'line': b'-- Eigen found (include: /usr/include/eigen3, version: 3.4.0)\n'}
+[6.751631] (gazebo_map_creator) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[6.757075] (gazebo_map_creator) StdoutLine: {'line': b'-- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb)\n'}
+[6.806180] (-) TimerEvent: {}
+[6.861472] (gazebo_map_creator) StdoutLine: {'line': b'-- Found Qhull version 8.0.2\n'}
+[6.906256] (-) TimerEvent: {}
+[6.966705] (gazebo_map_creator) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[7.006338] (-) TimerEvent: {}
+[7.069759] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_COMMON\n'}
+[7.070207] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_COMMON: /usr/lib/x86_64-linux-gnu/libpcl_common.so  \n'}
+[7.070335] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_KDTREE\n'}
+[7.070763] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_KDTREE: /usr/lib/x86_64-linux-gnu/libpcl_kdtree.so  \n'}
+[7.070849] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_OCTREE\n'}
+[7.071267] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_OCTREE: /usr/lib/x86_64-linux-gnu/libpcl_octree.so  \n'}
+[7.071352] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_SEARCH\n'}
+[7.071770] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_SEARCH: /usr/lib/x86_64-linux-gnu/libpcl_search.so  \n'}
+[7.071867] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_SAMPLE_CONSENSUS\n'}
+[7.072281] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_SAMPLE_CONSENSUS: /usr/lib/x86_64-linux-gnu/libpcl_sample_consensus.so  \n'}
+[7.072375] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_FILTERS\n'}
+[7.072791] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_FILTERS: /usr/lib/x86_64-linux-gnu/libpcl_filters.so  \n'}
+[7.072904] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_2D\n'}
+[7.073042] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_2D: /usr/include/pcl-1.12  \n'}
+[7.073139] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_GEOMETRY\n'}
+[7.073280] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_GEOMETRY: /usr/include/pcl-1.12  \n'}
+[7.073348] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_IO\n'}
+[7.073757] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_IO: /usr/lib/x86_64-linux-gnu/libpcl_io.so  \n'}
+[7.073902] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_FEATURES\n'}
+[7.074334] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_FEATURES: /usr/lib/x86_64-linux-gnu/libpcl_features.so  \n'}
+[7.074463] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_ML\n'}
+[7.074899] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_ML: /usr/lib/x86_64-linux-gnu/libpcl_ml.so  \n'}
+[7.074985] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_SEGMENTATION\n'}
+[7.075417] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_SEGMENTATION: /usr/lib/x86_64-linux-gnu/libpcl_segmentation.so  \n'}
+[7.075571] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_VISUALIZATION\n'}
+[7.075994] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_VISUALIZATION: /usr/lib/x86_64-linux-gnu/libpcl_visualization.so  \n'}
+[7.076143] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_SURFACE\n'}
+[7.076566] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_SURFACE: /usr/lib/x86_64-linux-gnu/libpcl_surface.so  \n'}
+[7.076694] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_REGISTRATION\n'}
+[7.077122] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_REGISTRATION: /usr/lib/x86_64-linux-gnu/libpcl_registration.so  \n'}
+[7.077262] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_KEYPOINTS\n'}
+[7.077679] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_KEYPOINTS: /usr/lib/x86_64-linux-gnu/libpcl_keypoints.so  \n'}
+[7.077814] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_TRACKING\n'}
+[7.078244] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_TRACKING: /usr/lib/x86_64-linux-gnu/libpcl_tracking.so  \n'}
+[7.078375] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_RECOGNITION\n'}
+[7.078797] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_RECOGNITION: /usr/lib/x86_64-linux-gnu/libpcl_recognition.so  \n'}
+[7.078975] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_STEREO\n'}
+[7.079404] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_STEREO: /usr/lib/x86_64-linux-gnu/libpcl_stereo.so  \n'}
+[7.079503] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_APPS\n'}
+[7.079919] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_APPS: /usr/lib/x86_64-linux-gnu/libpcl_apps.so  \n'}
+[7.080257] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_IN_HAND_SCANNER\n'}
+[7.080415] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_IN_HAND_SCANNER: /usr/include/pcl-1.12  \n'}
+[7.080483] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_MODELER\n'}
+[7.080646] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_MODELER: /usr/include/pcl-1.12  \n'}
+[7.080706] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_POINT_CLOUD_EDITOR\n'}
+[7.080937] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_POINT_CLOUD_EDITOR: /usr/include/pcl-1.12  \n'}
+[7.081005] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_OUTOFCORE\n'}
+[7.081439] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_OUTOFCORE: /usr/lib/x86_64-linux-gnu/libpcl_outofcore.so  \n'}
+[7.081553] (gazebo_map_creator) StdoutLine: {'line': b'-- looking for PCL_PEOPLE\n'}
+[7.081975] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL_PEOPLE: /usr/lib/x86_64-linux-gnu/libpcl_people.so  \n'}
+[7.082464] (gazebo_map_creator) StdoutLine: {'line': b'-- Found PCL: pcl_common;pcl_kdtree;pcl_octree;pcl_search;pcl_sample_consensus;pcl_filters;pcl_io;pcl_features;pcl_ml;pcl_segmentation;pcl_visualization;pcl_surface;pcl_registration;pcl_keypoints;pcl_tracking;pcl_recognition;pcl_stereo;pcl_apps;pcl_outofcore;pcl_people;Boost::system;Boost::filesystem;Boost::date_time;Boost::iostreams;Boost::serialization;/usr/lib/libOpenNI.so;libusb::libusb;/usr/lib/x86_64-linux-gnu/libOpenNI2.so;libusb::libusb;VTK::ChartsCore;VTK::CommonColor;VTK::CommonComputationalGeometry;VTK::CommonCore;VTK::CommonDataModel;VTK::CommonExecutionModel;VTK::CommonMath;VTK::CommonMisc;VTK::CommonTransforms;VTK::FiltersCore;VTK::FiltersExtraction;VTK::FiltersGeneral;VTK::FiltersGeometry;VTK::FiltersModeling;VTK::FiltersSources;VTK::ImagingCore;VTK::ImagingSources;VTK::InteractionImage;VTK::InteractionStyle;VTK::InteractionWidgets;VTK::IOCore;VTK::IOGeometry;VTK::IOImage;VTK::IOLegacy;VTK::IOPLY;VTK::RenderingAnnotation;VTK::RenderingCore;VTK::RenderingContext2D;VTK::RenderingLOD;VTK::RenderingFreeType;VTK::ViewsCore;VTK::ViewsContext2D;VTK::RenderingOpenGL2;VTK::GUISupportQt;FLANN::FLANN;QHULL::QHULL (Required is at least version "1.2") \n'}
+[7.106406] (-) TimerEvent: {}
+[7.142719] (gazebo_map_creator) StdoutLine: {'line': b'-- Configuring done\n'}
+[7.193871] (gazebo_map_creator) StdoutLine: {'line': b'-- Generating done\n'}
+[7.204171] (gazebo_map_creator) StdoutLine: {'line': b'-- Build files have been written to: /root/robot_ws/build/gazebo_map_creator\n'}
+[7.206467] (-) TimerEvent: {}
+[7.216897] (gazebo_map_creator) CommandEnded: {'returncode': 0}
+[7.218565] (gazebo_map_creator) JobProgress: {'identifier': 'gazebo_map_creator', 'progress': 'build'}
+[7.218590] (gazebo_map_creator) Command: {'cmd': ['/usr/bin/cmake', '--build', '/root/robot_ws/build/gazebo_map_creator', '--', '-j16', '-l16'], 'cwd': '/root/robot_ws/build/gazebo_map_creator', 'env': OrderedDict([('HOSTNAME', 'timemachine'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/root/robot_ws/install/gazebo_map_creator_interface/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/robot_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('QT_X11_NO_MITSHM', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('DISPLAY', ':1'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.docker.xauth'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('PWD', '/root/robot_ws/build/gazebo_map_creator'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble')]), 'shell': False}
+[7.266635] (gazebo_map_creator) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/gazebo_map_creator.dir/src/gazbeo_map_creator.cpp.o\x1b[0m\n'}
+[7.306542] (-) TimerEvent: {}
+[7.406738] (-) TimerEvent: {}
+[7.506978] (-) TimerEvent: {}
+[7.607210] (-) TimerEvent: {}
+[7.707448] (-) TimerEvent: {}
+[7.807691] (-) TimerEvent: {}
+[7.907924] (-) TimerEvent: {}
+[8.008162] (-) TimerEvent: {}
+[8.108403] (-) TimerEvent: {}
+[8.208653] (-) TimerEvent: {}
+[8.308896] (-) TimerEvent: {}
+[8.409139] (-) TimerEvent: {}
+[8.509394] (-) TimerEvent: {}
+[8.609646] (-) TimerEvent: {}
+[8.709897] (-) TimerEvent: {}
+[8.810352] (-) TimerEvent: {}
+[8.910597] (-) TimerEvent: {}
+[9.010871] (-) TimerEvent: {}
+[9.111119] (-) TimerEvent: {}
+[9.211371] (-) TimerEvent: {}
+[9.311630] (-) TimerEvent: {}
+[9.411909] (-) TimerEvent: {}
+[9.512183] (-) TimerEvent: {}
+[9.612485] (-) TimerEvent: {}
+[9.712736] (-) TimerEvent: {}
+[9.812968] (-) TimerEvent: {}
+[9.913197] (-) TimerEvent: {}
+[10.013443] (-) TimerEvent: {}
+[10.113727] (-) TimerEvent: {}
+[10.214185] (-) TimerEvent: {}
+[10.314432] (-) TimerEvent: {}
+[10.414683] (-) TimerEvent: {}
+[10.514931] (-) TimerEvent: {}
+[10.615207] (-) TimerEvent: {}
+[10.715488] (-) TimerEvent: {}
+[10.815748] (-) TimerEvent: {}
+[10.916046] (-) TimerEvent: {}
+[11.016314] (-) TimerEvent: {}
+[11.116577] (-) TimerEvent: {}
+[11.216870] (-) TimerEvent: {}
+[11.317203] (-) TimerEvent: {}
+[11.417486] (-) TimerEvent: {}
+[11.517775] (-) TimerEvent: {}
+[11.618084] (-) TimerEvent: {}
+[11.718425] (-) TimerEvent: {}
+[11.818726] (-) TimerEvent: {}
+[11.918970] (-) TimerEvent: {}
+[12.019221] (-) TimerEvent: {}
+[12.119477] (-) TimerEvent: {}
+[12.219725] (-) TimerEvent: {}
+[12.320201] (-) TimerEvent: {}
+[12.420450] (-) TimerEvent: {}
+[12.520716] (-) TimerEvent: {}
+[12.620972] (-) TimerEvent: {}
+[12.721222] (-) TimerEvent: {}
+[12.821480] (-) TimerEvent: {}
+[12.921735] (-) TimerEvent: {}
+[13.021991] (-) TimerEvent: {}
+[13.122239] (-) TimerEvent: {}
+[13.222500] (-) TimerEvent: {}
+[13.322754] (-) TimerEvent: {}
+[13.423012] (-) TimerEvent: {}
+[13.523267] (-) TimerEvent: {}
+[13.623520] (-) TimerEvent: {}
+[13.723771] (-) TimerEvent: {}
+[13.824031] (-) TimerEvent: {}
+[13.924282] (-) TimerEvent: {}
+[14.024534] (-) TimerEvent: {}
+[14.124993] (-) TimerEvent: {}
+[14.225443] (-) TimerEvent: {}
+[14.325704] (-) TimerEvent: {}
+[14.425965] (-) TimerEvent: {}
+[14.526226] (-) TimerEvent: {}
+[14.626508] (-) TimerEvent: {}
+[14.726766] (-) TimerEvent: {}
+[14.827018] (-) TimerEvent: {}
+[14.927268] (-) TimerEvent: {}
+[15.027514] (-) TimerEvent: {}
+[15.127755] (-) TimerEvent: {}
+[15.228006] (-) TimerEvent: {}
+[15.328265] (-) TimerEvent: {}
+[15.428527] (-) TimerEvent: {}
+[15.528780] (-) TimerEvent: {}
+[15.629025] (-) TimerEvent: {}
+[15.729283] (-) TimerEvent: {}
+[15.829522] (-) TimerEvent: {}
+[15.929768] (-) TimerEvent: {}
+[16.030211] (-) TimerEvent: {}
+[16.130478] (-) TimerEvent: {}
+[16.230729] (-) TimerEvent: {}
+[16.330988] (-) TimerEvent: {}
+[16.431227] (-) TimerEvent: {}
+[16.531473] (-) TimerEvent: {}
+[16.631720] (-) TimerEvent: {}
+[16.731974] (-) TimerEvent: {}
+[16.832234] (-) TimerEvent: {}
+[16.932500] (-) TimerEvent: {}
+[17.032761] (-) TimerEvent: {}
+[17.133014] (-) TimerEvent: {}
+[17.233265] (-) TimerEvent: {}
+[17.333526] (-) TimerEvent: {}
+[17.433778] (-) TimerEvent: {}
+[17.534036] (-) TimerEvent: {}
+[17.634303] (-) TimerEvent: {}
+[17.734564] (-) TimerEvent: {}
+[17.834814] (-) TimerEvent: {}
+[17.935081] (-) TimerEvent: {}
+[18.035328] (-) TimerEvent: {}
+[18.135580] (-) TimerEvent: {}
+[18.235832] (-) TimerEvent: {}
+[18.336083] (-) TimerEvent: {}
+[18.436330] (-) TimerEvent: {}
+[18.536597] (-) TimerEvent: {}
+[18.636861] (-) TimerEvent: {}
+[18.737142] (-) TimerEvent: {}
+[18.837404] (-) TimerEvent: {}
+[18.937664] (-) TimerEvent: {}
+[19.037924] (-) TimerEvent: {}
+[19.138181] (-) TimerEvent: {}
+[19.238440] (-) TimerEvent: {}
+[19.338698] (-) TimerEvent: {}
+[19.438955] (-) TimerEvent: {}
+[19.539208] (-) TimerEvent: {}
+[19.639464] (-) TimerEvent: {}
+[19.739720] (-) TimerEvent: {}
+[19.840076] (-) TimerEvent: {}
+[19.940451] (-) TimerEvent: {}
+[20.040691] (-) TimerEvent: {}
+[20.140940] (-) TimerEvent: {}
+[20.241198] (-) TimerEvent: {}
+[20.341457] (-) TimerEvent: {}
+[20.434906] (gazebo_map_creator) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX shared library libgazebo_map_creator.so\x1b[0m\n'}
+[20.441524] (-) TimerEvent: {}
+[20.541714] (-) TimerEvent: {}
+[20.641956] (-) TimerEvent: {}
+[20.742193] (-) TimerEvent: {}
+[20.842455] (-) TimerEvent: {}
+[20.942714] (-) TimerEvent: {}
+[20.973603] (gazebo_map_creator) StdoutLine: {'line': b'[100%] Built target gazebo_map_creator\n'}
+[20.982174] (gazebo_map_creator) CommandEnded: {'returncode': 0}
+[20.982738] (gazebo_map_creator) JobProgress: {'identifier': 'gazebo_map_creator', 'progress': 'install'}
+[20.983380] (gazebo_map_creator) Command: {'cmd': ['/usr/bin/cmake', '--install', '/root/robot_ws/build/gazebo_map_creator'], 'cwd': '/root/robot_ws/build/gazebo_map_creator', 'env': OrderedDict([('HOSTNAME', 'timemachine'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/root/robot_ws/install/gazebo_map_creator_interface/lib:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/root/robot_ws/src'), ('ROS_PYTHON_VERSION', '3'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('QT_X11_NO_MITSHM', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('DISPLAY', ':1'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.docker.xauth'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('AMENT_PREFIX_PATH', '/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('PWD', '/root/robot_ws/build/gazebo_map_creator'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/root/robot_ws/install/gazebo_map_creator_interface/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/robot_ws/install/gazebo_map_creator_interface:/opt/ros/humble')]), 'shell': False}
+[20.988824] (gazebo_map_creator) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[20.989400] (gazebo_map_creator) StdoutLine: {'line': b'-- Execute custom install script\n'}
+[20.989741] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/library_path.sh\n'}
+[20.998091] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/library_path.dsv\n'}
+[21.003917] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/scripts/request_map.py\n'}
+[21.012083] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/lib/libgazebo_map_creator.so\n'}
+[21.020333] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/lib/gazebo_map_creator/request_map.py\n'}
+[21.025782] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/package_run_dependencies/gazebo_map_creator\n'}
+[21.033729] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/parent_prefix_path/gazebo_map_creator\n'}
+[21.041961] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/ament_prefix_path.sh\n'}
+[21.042782] (-) TimerEvent: {}
+[21.051556] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/ament_prefix_path.dsv\n'}
+[21.061052] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/path.sh\n'}
+[21.067218] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/environment/path.dsv\n'}
+[21.073403] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.bash\n'}
+[21.081666] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.sh\n'}
+[21.090583] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.zsh\n'}
+[21.099502] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/local_setup.dsv\n'}
+[21.108306] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/package.dsv\n'}
+[21.118397] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/ament_index/resource_index/packages/gazebo_map_creator\n'}
+[21.127953] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/ament_cmake_export_libraries-extras.cmake\n'}
+[21.133202] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/ament_cmake_export_dependencies-extras.cmake\n'}
+[21.141129] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/gazebo_map_creatorConfig.cmake\n'}
+[21.142849] (-) TimerEvent: {}
+[21.149771] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/cmake/gazebo_map_creatorConfig-version.cmake\n'}
+[21.161396] (gazebo_map_creator) StdoutLine: {'line': b'-- Symlinking: /root/robot_ws/install/gazebo_map_creator/share/gazebo_map_creator/package.xml\n'}
+[21.168734] (gazebo_map_creator) CommandEnded: {'returncode': 0}
+[21.181143] (gazebo_map_creator) JobEnded: {'identifier': 'gazebo_map_creator', 'rc': 0}
+[21.181537] (-) EventReactorShutdown: {}

@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- ============================================= -->
+    <!-- ARGUMENTOS CONFIGURÁVEIS -->
+    <!-- ============================================= -->
+
+    <!-- Caminho para o URDF do robô -->
+    <arg name="urdf" default="$(find p3at_robot)/model/urdf/pioneer3at_sick_PLS100-112.urdf"/>
+
+    <!-- Ativar ou desativar interface gráfica do Gazebo -->
+    <arg name="gui" default="true"/>
+
+    <!-- Definição das paredes (opcional) -->
+    <!-- <arg name="paredes" default="$(find tangent_bug_2dnav)/worlds/mapa1/mapa.sdf"/> -->
+    <!-- <arg name="paredes" default="$(find tangent_bug_2dnav)/worlds/teste1/teste/model.sdf"/> -->
+
+
+    <!-- ============================================= -->
+    <!-- PARÂMETROS GLOBAIS -->
+    <!-- ============================================= -->
+
+    <!-- Usa o tempo simulado do Gazebo -->
+    <param name="/use_sim_time" value="true"/>
+
+    <!-- Carrega o URDF do robô para o parâmetro robot_description -->
+    <param name="robot_description" command="$(find xacro)/xacro $(arg urdf)"/>
+
+
+    <!-- ============================================= -->
+    <!-- GAZEBO -->
+    <!-- ============================================= -->
+
+    <!-- Lança o Gazebo com o mundo especificado -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find tangent_bug_2dnav)/maps/map2/world.sdf"/>
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="$(arg gui)"/>
+    </include>
+
+
+    <!-- ============================================= -->
+    <!-- ROBÔ E PUBLICADORES -->
+    <!-- ============================================= -->
+
+    <!-- Publicador de estados das juntas -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" respawn="false"/>
+
+    <!-- Publicador do estado do robô -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false"/>
+
+    <!-- Spawn do robô no Gazebo -->
+    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen" args="-param robot_description -urdf -model pioneer3at -x 0 -y 0 -z 0"/>
+
+
+    <!-- ============================================= -->
+    <!-- LOCALIZAÇÃO E NAVEGAÇÃO -->
+    <!-- ============================================= -->
+
+    <!-- Servidor de mapas (opcional, caso esteja usando mapas prontos) -->
+    <arg name="map" default="$(find tangent_bug_2dnav)/maps/map2/world.yaml"/>
+    <node name="map_server" pkg="map_server" type="map_server" output="screen" args="$(arg map)"/>
+
+    <!-- AMCL para localização -->
+    <node name="amcl" pkg="amcl" type="amcl" output="screen">
+        <param name="odom_frame_id" value="odom"/>
+        <param name="base_frame_id" value="base_link"/>
+        <param name="global_frame_id" value="map"/>
+        <param name="use_map_topic" value="true"/>
+        <param name="update_min_d" value="0.2"/>
+        <param name="update_min_a" value="0.2"/>
+        <param name="min_particles" value="500"/>
+        <param name="max_particles" value="2000"/>
+    </node>
+
+    <!-- Navegação com Move Base (opcional) -->
+    <rosparam file="$(find tangent_bug_2dnav)/config/move_base_params.yaml" command="load"/>
+    <rosparam file="$(find tangent_bug_2dnav)/config/costmap_common_params.yaml" command="load"/>
+    <rosparam file="$(find tangent_bug_2dnav)/config/global_costmap_params.yaml" command="load" ns="move_base"/>
+    <rosparam file="$(find tangent_bug_2dnav)/config/local_costmap_params.yaml" command="load" ns="move_base"/>
+
+    <node name="move_base" pkg="move_base" type="move_base" output="screen"/>
+
+
+    <!-- ============================================= -->
+    <!-- MODELOS ADICIONAIS NO GAZEBO (OPCIONAL) -->
+    <!-- ============================================= -->
+
+    <!-- Spawn das paredes no Gazebo (opcional) -->
+    <!--
+    <node name="spawn_paredes" pkg="gazebo_ros" type="spawn_model" output="screen" args="-file $(arg paredes) -sdf -model paredes_model -x 0 -y 0 -z 0"/>
+    -->
+
+    <!-- ============================================= -->
+    <!-- VISUALIZAÇÃO (OPCIONAL) -->
+    <!-- ============================================= -->
+
+    <!-- RViz (opcional, habilite se necessário) -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tangent_bug_2dnav)/config/rviz/rviz.rviz"/>
+
+</launch>

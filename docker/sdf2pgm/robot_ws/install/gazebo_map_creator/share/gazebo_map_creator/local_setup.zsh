@@ -1,0 +1,1 @@
+/root/robot_ws/build/gazebo_map_creator/ament_cmake_environment_hooks/local_setup.zsh

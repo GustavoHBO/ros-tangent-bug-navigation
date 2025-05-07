@@ -18,10 +18,16 @@
 enum State {
     MOVE_TO_GOAL,
     FOLLOW_CONTOUR,
-    LEAVE_CONTOUR
+    LEAVE_CONTOUR,
+    EMERGENCY_STOP
 };
 
 class TangentBug {
+
+    #ifdef UNIT_TEST
+public:
+    State getCurrentState() const { return current_state_; }
+#endif
 public:
     TangentBug(ros::NodeHandle& nh);
 
@@ -57,6 +63,15 @@ private:
     double goal_tolerance_;
     double min_distance_to_goal_;
     double best_distance_to_goal_;
+    double safety_radius_;
+    double contour_follow_distance_;
+    double goal_angle_threshold_;
+    double max_obstacle_distance_;
+    double rotation_speed_;
+    double contour_speed_;
+    double robot_width_;
+    double safety_margin_;
+    double obstacle_threshold_;
 
     // Estado do controlador
     State current_state_;
@@ -70,18 +85,25 @@ private:
     double contour_start_y_;
 
     // Funções auxiliares
+    void stopRobot(int repeat_times = 5);
+    void rotateInPlace(double angular_speed = 0.5, double duration_seconds = 1.0);
     void moveToGoal(double distance_to_goal);
     void followContour();
     void leaveContour();
     double calculateDistance(double x1, double y1, double x2, double y2);
     double calculateHeadingToGoal();
-    int isPathClear(double heading, double obstacle_threshold = 1.0);
+    int isPathClear(double heading, double obstacle_threshold = 2.0);
 
     // Função para publicar o marcador da trajetória
     void publishTrajectoryMarker();
 
     // Função para spawnar o marcador do objetivo no Gazebo
     void spawnGoalMarker(double x, double y);  // Nova função para spawnar o modelo no Gazebo
+
+    // Helper methods for tangent bug logic
+    std::pair<double, double> calculateTangentDirection();
+    bool findContourDiscontinuity(std::pair<double, double>& discontinuity);
+    void updateMinGoalDistance();
 };
 
 #endif

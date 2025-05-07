@@ -1,0 +1,1 @@
+/root/robot_ws/build/gazebo_map_creator_interface/rosidl_typesupport_introspection_c/gazebo_map_creator_interface/srv/detail/map_request__rosidl_typesupport_introspection_c.h

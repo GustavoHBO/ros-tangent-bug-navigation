@@ -1,0 +1,44 @@
+<launch>
+
+    <!-- Argumentos do URDF -->
+    <arg name="urdf" default="$(find p3at_robot)/model/urdf/pioneer3at_sick_PLS100-112.urdf"/>
+    <arg name="gui" default="True"/>
+    <param name="robot_description" command="$(find xacro)/xacro $(arg urdf)"/>
+
+
+    <!-- Launch Gazebo with your SDF world -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find tangent_bug_2dnav)/maps/map1/world.sdf"/>
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="true"/>
+    </include>
+
+    <!-- Spawn your robot model -->
+    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen" args="-param robot_description -urdf -model pioneer3at -x 0 -y 0 -z 0"/>
+
+    <!-- Start robot state publisher -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen">
+        <param name="robot_description" command="$(find xacro)/xacro $(arg urdf)"/>
+    </node>
+
+    <!-- Launch AMCL for localization -->
+    <node name="amcl" pkg="amcl" type="amcl" output="screen">
+        <param name="use_map_topic" value="true"/>
+        <param name="odom_frame_id" value="odom"/>
+        <param name="base_frame_id" value="base_link"/>
+        <param name="global_frame_id" value="map"/>
+        <param name="scan_topic" value="scan"/>
+    </node>
+
+    <!-- Launch move_base for navigation -->
+    <node name="move_base" pkg="move_base" type="move_base" output="screen">
+        <rosparam file="$(find tangent_bug_2dnav)/config/costmap_common_params.yaml" command="load"/>
+        <rosparam file="$(find tangent_bug_2dnav)/config/local_costmap_params.yaml" command="load"/>
+        <rosparam file="$(find tangent_bug_2dnav)/config/global_costmap_params.yaml" command="load"/>
+        <rosparam file="$(find tangent_bug_2dnav)/config/base_local_planner_params.yaml" command="load"/>
+    </node>
+
+    <!-- Launch RViz for visualization -->
+    <node name="rviz" pkg="rviz" type="rviz" />
+</launch>

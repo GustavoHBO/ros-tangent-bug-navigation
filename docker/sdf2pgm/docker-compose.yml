@@ -1,0 +1,16 @@
+services:
+  ros2_gazebo:
+    build: .
+    container_name: ros2_gazebo_map_creator
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=/tmp/.docker.xauth
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ~/.Xauthority:/tmp/.docker.xauth:rw
+      - ./robot_ws:/root/robot_ws
+    stdin_open: true
+    tty: true
+    command: bash
