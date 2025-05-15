@@ -79,6 +79,17 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "forward_list": "cpp"
+        "forward_list": "cpp",
+        "csetjmp": "cpp",
+        "csignal": "cpp",
+        "any": "cpp",
+        "codecvt": "cpp",
+        "netfwd": "cpp",
+        "regex": "cpp",
+        "rope": "cpp",
+        "slist": "cpp",
+        "future": "cpp",
+        "valarray": "cpp",
+        "filesystem": "cpp"
     }
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="default">
+
+    <include>
+      <name>map_model</name>
+      <pose>0 0 0 0 0 0</pose>
+      <static>true</static>
+      <uri>file://$(find tangent_bug_2dnav)/models/map/model.sdf</uri>
+    </include>
+
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+  </world>
+</sdf>

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "TangentBug.h"
+#include "../src/TangentBug.h"
 #include <ros/ros.h>
 #include <memory>
 
@@ -52,7 +52,7 @@ TEST_F(TangentBugTest, IsPathClearTest) {
     scan.ranges.resize(num_readings, 5.0);  // Initialize with a clear path (range=5.0)
 
     // Simulate the reception of the laser scan.
-    tangent_bug->scanCallback(std::make_shared<sensor_msgs::LaserScan>(scan));
+    tangent_bug->scanCallback(boost::make_shared<sensor_msgs::LaserScan>(scan));
 
     // For heading 0.0, the path should be clear.
     EXPECT_EQ(tangent_bug->isPathClear(0.0, 1.0), 1);
@@ -60,10 +60,70 @@ TEST_F(TangentBugTest, IsPathClearTest) {
     // Now simulate an obstacle by setting a close range at heading 0.0.
     int index = static_cast<int>((0.0 - scan.angle_min) / scan.angle_increment);
     scan.ranges[index] = 0.5;  // Obstacle detected within threshold
-    tangent_bug->scanCallback(std::make_shared<sensor_msgs::LaserScan>(scan));
+    tangent_bug->scanCallback(boost::shared_ptr<sensor_msgs::LaserScan>(std::make_shared<sensor_msgs::LaserScan>(scan)));
 
     EXPECT_EQ(tangent_bug->isPathClear(0.0, 1.0), 0);
 }
+
+TEST_F(TangentBugTest, SelectBestBoundaryPointTest) {
+    sensor_msgs::LaserScan scan;
+    scan.angle_min = -1.57;
+    scan.angle_max = 1.57;
+    scan.angle_increment = 0.01;
+    int num_readings = static_cast<int>((scan.angle_max - scan.angle_min) / scan.angle_increment);
+    scan.range_max = 10.0;
+    scan.ranges.resize(num_readings, 5.0);
+
+    // Inject a closer point with better heuristic
+    int best_index = num_readings / 2 + 10; // off-center
+    scan.ranges[best_index] = 2.0;
+
+    tangent_bug->scanCallback(std::make_shared<sensor_msgs::LaserScan>(scan));
+
+    // Position and goal required for cost calculation
+    tangent_bug->current_pose_.position.x = 0.0;
+    tangent_bug->current_pose_.position.y = 0.0;
+    tangent_bug->goal_x_ = 5.0;
+    tangent_bug->goal_y_ = 0.0;
+
+    int index = tangent_bug->selectBestBoundaryPoint();
+    EXPECT_EQ(index, best_index);
+}
+
+TEST_F(TangentBugTest, StateTransitionToContourTest) {
+    // Fake goal directly ahead
+    tangent_bug->goal_x_ = 10.0;
+    tangent_bug->goal_y_ = 0.0;
+    tangent_bug->current_pose_.position.x = 0.0;
+    tangent_bug->current_pose_.position.y = 0.0;
+    tangent_bug->current_pose_.orientation = tf2::toMsg(tf2::Quaternion(0, 0, 0, 1));
+
+    // Block the path directly ahead
+    sensor_msgs::LaserScan scan;
+    scan.angle_min = -1.57;
+    scan.angle_max = 1.57;
+    scan.angle_increment = 0.01;
+    int num_readings = static_cast<int>((scan.angle_max - scan.angle_min) / scan.angle_increment);
+    scan.range_max = 10.0;
+    scan.ranges.resize(num_readings, 5.0);
+
+    int center_idx = static_cast<int>((0.0 - scan.angle_min) / scan.angle_increment);
+    scan.ranges[center_idx] = 0.5;  // Obstacle within threshold
+
+    tangent_bug->scanCallback(std::make_shared<sensor_msgs::LaserScan>(scan));
+
+    // Run compute control once
+    tangent_bug->computeControl();
+
+    EXPECT_EQ(tangent_bug->current_state_, TangentBug::FOLLOW_CONTOUR);
+}
+
+TEST_F(TangentBugTest, EmptyScanDoesNotCrash) {
+    sensor_msgs::LaserScan scan;
+    scan.ranges.clear();  // Empty ranges
+    EXPECT_NO_THROW(tangent_bug->scanCallback(boost::make_shared<sensor_msgs::LaserScan>(scan)));
+}
+
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "tangent_bug_test");

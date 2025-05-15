@@ -97,6 +97,6 @@
     <!-- ============================================= -->
 
     <!-- RViz (opcional, habilite se necessário) -->
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tangent_bug_2dnav)/config/rviz/rviz.rviz"/>
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tangent_bug_2dnav)/config/rviz/rviz.rviz"/> -->
 
 </launch>

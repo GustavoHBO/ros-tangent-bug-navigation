@@ -15,34 +15,37 @@
 #include <ros/package.h>
 #include <fstream>
 
-enum State {
+enum State
+{
     MOVE_TO_GOAL,
     FOLLOW_CONTOUR,
     LEAVE_CONTOUR,
     EMERGENCY_STOP
 };
 
-class TangentBug {
+class TangentBug
+{
 
-    #ifdef UNIT_TEST
+#ifdef UNIT_TEST
 public:
     State getCurrentState() const { return current_state_; }
 #endif
 public:
-    TangentBug(ros::NodeHandle& nh);
+    TangentBug(ros::NodeHandle &nh);
 
     // Callbacks
-    void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg);
-    void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-    void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void scanCallback(const sensor_msgs::LaserScan::ConstPtr &msg);
+    void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
+    void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
 
     // Navegação principal
     void navigate();
-    
+
     // Computa o controle baseado no estado atual
     void computeControl();
 
-private:
+// private:
+
     ros::NodeHandle nh_;
 
     // Subscribers e Publishers
@@ -50,7 +53,7 @@ private:
     ros::Subscriber odom_sub_;
     ros::Subscriber goal_sub_;
     ros::Publisher cmd_vel_pub_;
-    ros::Publisher marker_pub_;  // Publisher para markers no RViz
+    ros::Publisher marker_pub_; // Publisher para markers no RViz
 
     // Dados de sensores e posição
     sensor_msgs::LaserScan current_scan_;
@@ -60,6 +63,11 @@ private:
     // Variáveis do objetivo
     double goal_x_;
     double goal_y_;
+    double best_boundary_x_;
+    double best_boundary_y_;
+    double best_boundary_cost_;
+    bool boundary_loop_started_;
+    bool boundary_loop_completed_;
     double goal_tolerance_;
     double min_distance_to_goal_;
     double best_distance_to_goal_;
@@ -93,17 +101,26 @@ private:
     double calculateDistance(double x1, double y1, double x2, double y2);
     double calculateHeadingToGoal();
     int isPathClear(double heading, double obstacle_threshold = 2.0);
+    int selectBestBoundaryPoint();
+    bool shouldExitBoundaryFollowing();
+    void publishEventMarker(const std::string &event_name, double x, double y, float r, float g, float b);
+    void moveTowardHeading(double target_heading);
+    void moveTo(double x, double y);
+    void resetBoundaryTracking();
 
     // Função para publicar o marcador da trajetória
     void publishTrajectoryMarker();
 
     // Função para spawnar o marcador do objetivo no Gazebo
-    void spawnGoalMarker(double x, double y);  // Nova função para spawnar o modelo no Gazebo
+    void spawnGoalMarker(double x, double y); // Nova função para spawnar o modelo no Gazebo
 
     // Helper methods for tangent bug logic
     std::pair<double, double> calculateTangentDirection();
-    bool findContourDiscontinuity(std::pair<double, double>& discontinuity);
+    bool findContourDiscontinuity(std::pair<double, double> &discontinuity);
     void updateMinGoalDistance();
+
+    void publishDebugMarkers(double cone_angle, double obstacle_threshold);
+
 };
 
 #endif
