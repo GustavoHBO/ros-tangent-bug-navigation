@@ -44,7 +44,7 @@ public:
     // Computa o controle baseado no estado atual
     void computeControl();
 
-// private:
+    // private:
 
     ros::NodeHandle nh_;
 
@@ -80,6 +80,7 @@ public:
     double robot_width_;
     double safety_margin_;
     double obstacle_threshold_;
+    double gap_threshold_;
 
     // Estado do controlador
     State current_state_;
@@ -120,7 +121,12 @@ public:
     void updateMinGoalDistance();
 
     void publishDebugMarkers(double cone_angle, double obstacle_threshold);
+    void moveToPoint(double target_x, double target_y);
+    void followObstacle();
 
+    std::vector<int> detectObstacleBoundaries2D(const sensor_msgs::LaserScan &scan, double threshold);
+    std::vector<std::vector<geometry_msgs::Point>> extractObstacleSegments2D(const sensor_msgs::LaserScan &scan, double threshold);
+    geometry_msgs::Point findClosestEndpointToPoint(const std::vector<std::vector<geometry_msgs::Point>>& segments,const geometry_msgs::Point& target);
 };
 
 #endif
