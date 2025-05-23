@@ -2,6 +2,9 @@
 #include <tf/transform_datatypes.h> // Para converter orientações
 #include <tf/transform_listener.h>  // Para ouvir as transformações
 #include <cmath>
+#include "utils/tangentbug_utils.h"
+
+using namespace tangentbug_utils;
 
 inline double normalizeAngle(double angle)
 {
@@ -54,6 +57,7 @@ TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh), current_state_(MOVE_TO_GO
     // Initialize goal to NaN
     goal_x_ = std::numeric_limits<double>::quiet_NaN();
     goal_y_ = std::numeric_limits<double>::quiet_NaN();
+    geometry_msgs::Point best_leave_point_;
 }
 
 void TangentBug::scanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
@@ -122,22 +126,110 @@ void TangentBug::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 
 void TangentBug::navigate()
 {
-    ros::Rate rate(50);
+    stopRobot();
+    ros::Rate rate(100);
     while (ros::ok())
     {
+        std::cout << "TangentBug::navigate()" << std::endl;
         computeControl();
         ros::spinOnce();
-        rate.sleep();
     }
 }
 
 void TangentBug::computeControl()
 {
+
+    const auto &robot_position = current_pose_.position;
+    geometry_msgs::Point goal_position;
+    goal_position.x = 5;
+    goal_position.y = 5;
+    goal_position.z = 0.0;
+
+    const auto segments = extractObstacleSegments2D(current_scan_, 0.8); // Atualiza os segmentos de obstáculos
+    std::cout << "obstacle_segments.size(): " << segments.size() << std::endl;
+
+    if (segments.empty())
+    {
+        ROS_WARN("No obstacle segments to follow.");
+        return;
+    }
+
+    // Track best distance to goal during boundary following
+    double current_distance_to_goal = calculateDistance(robot_position.x, robot_position.y, goal_position.x, goal_position.y);
+    if (current_distance_to_goal < best_distance_to_goal_)
+    {
+        best_distance_to_goal_ = current_distance_to_goal;
+        best_leave_point_ = robot_position;
+        std::cout << "best_leave_point_: " << best_leave_point_.x << ", " << best_leave_point_.y << std::endl;
+    }
+
+    // Select the best segment (closest to goal by endpoint)
+    auto best_segment = findBestSegmentTowardGoal(segments, goal_position);
+    std::cout << "best_segment.size(): " << best_segment.size() << std::endl;
+
+    // Simplify the segment to reduce noise
+    best_segment = simplifySegment(best_segment, 0.5, 5.0);
+    std::cout << "best_segment.size(): " << best_segment.size() << std::endl;
+
+    if (best_segment.empty())
+    {
+        ROS_WARN("No valid segment for following.");
+        return;
+    }
+
+    // Offset segment toward robot using perspective
+    auto offset_path = offsetSegmentTowardRobotPerspective(best_segment, robot_position, 30.0);
+    if (offset_path.empty())
+    {
+        ROS_WARN("Offset path is empty.");
+        return;
+    }
+
+    // Spawn spheres at offset points for visualization
+    for (const auto &pt : offset_path)
+    {
+        spawnSphereAt(pt.x, pt.y, 0.1, "#FF0000", 10); // Spawn sphere at offset point
+    }
+
+    const auto closest_point = findClosestEndpointToPoint(offset_path, robot_position);
+    std::cout << "closest_point: " << closest_point.x << ", " << closest_point.y << std::endl;
+
+    // Sort offset points by distance to goal (TangentBug heuristic)
+    // std::sort(offset_path.begin(), offset_path.end(), [&](const auto &a, const auto &b)
+    //           {
+    //     double da = std::hypot(goal_position.x - a.x, goal_position.y - a.y);
+    //     double db = std::hypot(goal_position.x - b.x, goal_position.y - b.y);
+    //     return da < db; });
+
+    // for (const auto &pt : offset_path)
+    // {
+    // const
+    spawnSphereAt(closest_point.x, closest_point.y, 0.6, "#00FF00", 10); // Spawn sphere at offset point
+    std::cout << "closest_point: " << closest_point.x << ", " << closest_point.y << std::endl;
+    moveToPoint(closest_point.x, closest_point.y);
+    std::cout << "Stopping robot..." << std::endl;
+    stopRobot();
+    std::cout << "Robot stopped." << std::endl;
+    // deleteAllSpheres();
+
+    // double dist = std::hypot(current_pose_.position.x - pt.x,
+    //                          current_pose_.position.y - pt.y);
+    // if (dist < goal_tolerance_)
+    // {
+    //     stopRobot();
+    //     break;
+    // }
+    // }
+
+    return;
+
     if (std::isnan(goal_x_) || std::isnan(goal_y_))
     {
         ROS_WARN_THROTTLE(5, "Aguardando um objetivo válido...");
         return;
     }
+    followContour();
+    return;
     const std::vector<std::vector<geometry_msgs::Point>> &obstacle_segments = extractObstacleSegments2D(current_scan_, 0.8); // Atualiza os segmentos de obstáculos
     std::cout << "obstacle_segments.size(): " << obstacle_segments.size() << std::endl;
     return;
@@ -363,11 +455,7 @@ void TangentBug::stopRobot(int repeat_times)
     geometry_msgs::Twist stop_msg;
     stop_msg.linear.x = 0.0;
     stop_msg.angular.z = 0.0;
-    for (int i = 0; i < repeat_times; i++)
-    {
-        cmd_vel_pub_.publish(stop_msg);
-        ros::Duration(0.1).sleep();
-    }
+    cmd_vel_pub_.publish(stop_msg);
 }
 
 void TangentBug::rotateInPlace(double angular_speed, double duration_seconds)
@@ -377,12 +465,10 @@ void TangentBug::rotateInPlace(double angular_speed, double duration_seconds)
     rotate_msg.linear.x = 0.0;
     rotate_msg.angular.z = angular_speed;
 
-    ros::Rate rate(50);
     int ticks = duration_seconds * 50; // duration in seconds * rate
     for (int i = 0; i < ticks; ++i)
     {
         cmd_vel_pub_.publish(rotate_msg);
-        rate.sleep();
     }
     std::cout << "rotateInPlace: stopRobot" << std::endl;
     stopRobot();
@@ -395,6 +481,7 @@ double TangentBug::calculateDistance(double x1, double y1, double x2, double y2)
 
     // Log mais detalhado para depuração
     ROS_INFO("Posicao atual: [%f, %f], Objetivo: [%f, %f]", x1, y1, x2, y2);
+    ROS_INFO("Distância calculada: %f", distance);
 
     // Retorna a distância calculada
     return distance;
@@ -547,34 +634,63 @@ void TangentBug::spawnGoalMarker(double x, double y)
     }
 }
 
-void TangentBug::moveToPoint(double target_x, double target_y)
+void TangentBug::moveToPoint(double x, double y)
 {
-    geometry_msgs::Twist cmd_vel;
+    geometry_msgs::Twist cmd;
+    geometry_msgs::Point p = current_pose_.position;
 
-    double target_heading = atan2(target_y - current_pose_.position.y, target_x - current_pose_.position.x);
-    double robot_yaw = tf::getYaw(current_pose_.orientation);
+    // Vector to target
+    double dx = x - p.x;
+    double dy = y - p.y;
 
-    double heading_error = target_heading - robot_yaw;
-    heading_error = std::atan2(std::sin(heading_error), std::cos(heading_error));
+    // Compute distance and direction
+    double distance = std::hypot(dx, dy);
+    double angle_to_target = atan2(dy, dx);
+    double yaw = tf::getYaw(current_pose_.orientation);
 
-    double distance_to_target = calculateDistance(current_pose_.position.x, current_pose_.position.y, target_x, target_y);
+    // Angular error, normalized
+    double angle_error = atan2(sin(angle_to_target - yaw), cos(angle_to_target - yaw));
 
-    // Rotate robot first to face target point
-    if (std::abs(heading_error) > (M_PI / 18)) // ~10 degrees tolerance
+    // Stop robot if close enough
+    if (distance < goal_tolerance_)
     {
-        cmd_vel.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, heading_error * 1.2));
-        cmd_vel.linear.x = 0.0;
+        ROS_INFO("Target reached: distance=%.2f, angle_error=%.2f", distance, angle_error);
+        stopRobot();
+        return;
     }
-    else
+
+    // Rotate toward target
+    cmd.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, angle_error * 1.5));
+
+    // Move forward if facing roughly the right direction
+    if (std::abs(angle_error) < 0.2)
     {
-        cmd_vel.linear.x = std::min(max_linear_speed_, distance_to_target * 0.7);
-        cmd_vel.angular.z = heading_error * 0.5;
+        cmd.linear.x = std::min(distance * 0.7, max_linear_speed_);
     }
 
-    cmd_vel_pub_.publish(cmd_vel);
+    ROS_DEBUG("moveToPoint: dx=%.2f, dy=%.2f, distance=%.2f, angle_to_target=%.2f, yaw=%.2f, angle_error=%.2f",
+              dx, dy, distance, angle_to_target, yaw, angle_error);
 
-    ROS_DEBUG("moveToPoint: target=(%.2f, %.2f), distance=%.2f, heading_error=%.2f, linear_vel=%.2f, angular_vel=%.2f",
-              target_x, target_y, distance_to_target, heading_error, cmd_vel.linear.x, cmd_vel.angular.z);
+    cmd_vel_pub_.publish(cmd);
+
+    while (ros::ok())
+    {
+        geometry_msgs::Point p = current_pose_.position;
+
+        // Vector to target
+        dx = x - p.x;
+        dy = y - p.y;
+
+        // Compute distance and direction
+        distance = std::hypot(dx, dy);
+        ros::spinOnce();
+        if (distance < goal_tolerance_)
+        {
+            ROS_INFO("Target reached: distance=%.2f, angle_error=%.2f", distance, angle_error);
+            stopRobot();
+            break;
+        }
+    }
 }
 
 void TangentBug::followObstacle()
@@ -713,35 +829,166 @@ std::vector<std::vector<geometry_msgs::Point>> TangentBug::extractObstacleSegmen
     return segments;
 }
 
+/**
+ * @brief Finds the closest endpoint (first or last) of a given segment to a target point.
+ *
+ * @param segment The segment of points to evaluate.
+ * @param target The target point to which the distance is calculated.
+ * @return The endpoint (first or last point of the segment) that is closest to the target point.
+ * If the segment is empty, a default-constructed geometry_msgs::Point is returned.
+ */
 geometry_msgs::Point TangentBug::findClosestEndpointToPoint(
-    const std::vector<std::vector<geometry_msgs::Point>> &segments,
+    const std::vector<geometry_msgs::Point> &segment,
     const geometry_msgs::Point &target)
 {
-    geometry_msgs::Point closest_point;
-    double min_distance = std::numeric_limits<double>::max();
+    // Se o segmento estiver vazio, não há pontos para comparar, retorna um ponto padrão.
+    // É importante considerar como você quer lidar com esse caso.
+    if (segment.empty())
+    {
+        return geometry_msgs::Point(); // Retorna um ponto com coordenadas (0,0,0) ou o padrão.
+    }
+
+    const auto &first = segment.front();
+    const auto &last = segment.back();
+
+    // Calcula a distância do primeiro ponto ao alvo
+    double dist_first = std::hypot(target.x - first.x, target.y - first.y);
+
+    // Calcula a distância do último ponto ao alvo
+    double dist_last = std::hypot(target.x - last.x, target.y - last.y);
+
+    // Compara as distâncias e retorna o ponto mais próximo
+    if (dist_first <= dist_last) // Usamos <= para garantir que o 'first' seja escolhido em caso de empate
+    {
+        return first;
+    }
+    else
+    {
+        return last;
+    }
+}
+
+std::vector<geometry_msgs::Point> TangentBug::findBestSegmentTowardGoal(
+    const std::vector<std::vector<geometry_msgs::Point>> &segments,
+    const geometry_msgs::Point &goal)
+{
+    std::vector<geometry_msgs::Point> best_segment;
+    double min_goal_distance = std::numeric_limits<double>::max();
 
     for (const auto &segment : segments)
     {
         if (segment.empty())
             continue;
 
-        const auto &first = segment.front();
-        const auto &last = segment.back();
+        const auto &start = segment.front();
+        const auto &end = segment.back();
 
-        double dist_first = std::hypot(target.x - first.x, target.y - first.y);
-        if (dist_first < min_distance)
+        double dist_start = std::hypot(goal.x - start.x, goal.y - start.y);
+        double dist_end = std::hypot(goal.x - end.x, goal.y - end.y);
+
+        double min_segment_dist = std::min(dist_start, dist_end);
+
+        if (min_segment_dist < min_goal_distance)
         {
-            min_distance = dist_first;
-            closest_point = first;
+            min_goal_distance = min_segment_dist;
+            best_segment = segment;
         }
+    }
+    return best_segment;
+}
 
-        double dist_last = std::hypot(target.x - last.x, target.y - last.y);
-        if (dist_last < min_distance)
+std::vector<geometry_msgs::Point> TangentBug::offsetSegmentTowardRobot(
+    const std::vector<geometry_msgs::Point> &segment,
+    const geometry_msgs::Point &robot,
+    double offset_distance_cm)
+{
+    std::vector<geometry_msgs::Point> offset_segment;
+
+    if (segment.size() < 1)
+        return offset_segment;
+
+    geometry_msgs::Point p1 = segment.front();
+    geometry_msgs::Point p2 = segment.back();
+
+    double dx = p2.x - p1.x;
+    double dy = p2.y - p1.y;
+    double length = std::hypot(dx, dy);
+
+    double nx, ny;
+
+    if (length < 1e-6)
+    {
+        // Use vector from point to robot if p1 and p2 are nearly the same
+        double dir_x = robot.x - p1.x;
+        double dir_y = robot.y - p1.y;
+        double norm = std::hypot(dir_x, dir_y);
+        if (norm < 1e-6)
+            return segment; // robot and point are nearly coincident
+        nx = dir_x / norm;
+        ny = dir_y / norm;
+    }
+    else
+    {
+        // Normal to the segment direction
+        nx = -dy / length;
+        ny = dx / length;
+
+        // Check direction toward robot
+        double cx = (p1.x + p2.x) / 2.0;
+        double cy = (p1.y + p2.y) / 2.0;
+        double rx = robot.x - cx;
+        double ry = robot.y - cy;
+
+        if ((nx * rx + ny * ry) < 0)
         {
-            min_distance = dist_last;
-            closest_point = last;
+            nx = -nx;
+            ny = -ny;
         }
     }
 
-    return closest_point;
+    double offset_m = offset_distance_cm / 100.0;
+
+    for (const auto &pt : segment)
+    {
+        geometry_msgs::Point shifted;
+        shifted.x = pt.x + offset_m * nx;
+        shifted.y = pt.y + offset_m * ny;
+        shifted.z = 0.0;
+        offset_segment.push_back(shifted);
+    }
+
+    return offset_segment;
+}
+
+std::vector<geometry_msgs::Point> TangentBug::offsetSegmentTowardRobotPerspective(
+    const std::vector<geometry_msgs::Point> &segment,
+    const geometry_msgs::Point &robot,
+    double offset_distance_cm)
+{
+    std::vector<geometry_msgs::Point> offset_segment;
+
+    if (segment.empty())
+        return offset_segment;
+
+    double offset_m = offset_distance_cm / 100.0;
+
+    for (const auto &pt : segment)
+    {
+        double dx = robot.x - pt.x;
+        double dy = robot.y - pt.y;
+        double norm = std::hypot(dx, dy);
+
+        geometry_msgs::Point shifted = pt;
+
+        if (norm > 1e-6)
+        {
+            // Reverse direction if offset is negative (move away from robot)
+            shifted.x += offset_m * (dx / norm);
+            shifted.y += offset_m * (dy / norm);
+        }
+
+        offset_segment.push_back(shifted);
+    }
+
+    return offset_segment;
 }

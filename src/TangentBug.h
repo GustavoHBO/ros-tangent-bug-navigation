@@ -81,6 +81,7 @@ public:
     double safety_margin_;
     double obstacle_threshold_;
     double gap_threshold_;
+    geometry_msgs::Point best_leave_point_;
 
     // Estado do controlador
     State current_state_;
@@ -94,7 +95,7 @@ public:
     double contour_start_y_;
 
     // Funções auxiliares
-    void stopRobot(int repeat_times = 5);
+    void stopRobot(int repeat_times = 1);
     void rotateInPlace(double angular_speed = 0.5, double duration_seconds = 1.0);
     void moveToGoal(double distance_to_goal);
     void followContour();
@@ -124,9 +125,22 @@ public:
     void moveToPoint(double target_x, double target_y);
     void followObstacle();
 
-    std::vector<int> detectObstacleBoundaries2D(const sensor_msgs::LaserScan &scan, double threshold);
-    std::vector<std::vector<geometry_msgs::Point>> extractObstacleSegments2D(const sensor_msgs::LaserScan &scan, double threshold);
-    geometry_msgs::Point findClosestEndpointToPoint(const std::vector<std::vector<geometry_msgs::Point>>& segments,const geometry_msgs::Point& target);
+    std::vector<int> detectObstacleBoundaries2D(
+        const sensor_msgs::LaserScan &scan, 
+        double threshold
+    );
+    std::vector<std::vector<geometry_msgs::Point>> extractObstacleSegments2D(
+        const sensor_msgs::LaserScan &scan, 
+        double threshold
+    );
+    geometry_msgs::Point findClosestEndpointToPoint(
+        const std::vector<geometry_msgs::Point> &segment, const geometry_msgs::Point &target);
+    std::vector<geometry_msgs::Point> findBestSegmentTowardGoal(const std::vector<std::vector<geometry_msgs::Point>> &segments, const geometry_msgs::Point &goal);
+    std::vector<geometry_msgs::Point> offsetSegmentTowardRobot(const std::vector<geometry_msgs::Point> &segment, const geometry_msgs::Point &robot, double offset_distance_cm);
+    std::vector<geometry_msgs::Point> offsetSegmentTowardRobotPerspective(
+        const std::vector<geometry_msgs::Point> &segment,
+        const geometry_msgs::Point &robot,
+        double offset_distance_cm);
 };
 
 #endif
