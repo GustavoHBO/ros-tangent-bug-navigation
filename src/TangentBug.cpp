@@ -1,29 +1,24 @@
 #include "TangentBug.h"
-#include <tf/transform_datatypes.h> // Para converter orientações
-#include <tf/transform_listener.h>  // Para ouvir as transformações
+#include <tf/transform_datatypes.h>
 #include <cmath>
-#include "utils/tangentbug_utils.h"
 
-using namespace tangentbug_utils;
-
-inline double normalizeAngle(double angle)
-{
-    return atan2(sin(angle), cos(angle));
-}
-
-TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh), current_state_(MOVE_TO_GOAL)
+TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh),
+                                              current_state_(MOVE_TO_GOAL),
+                                              tf_buffer_(ros::Duration(10.0)), // cache de 10s
+                                              tf_listener_(tf_buffer_)         // inicia listener
 {
 
     // Subscribers and publishers
-    scan_sub_ = nh_.subscribe("/scan", 50, &TangentBug::scanCallback, this);
-    odom_sub_ = nh_.subscribe("/odom", 50, &TangentBug::odomCallback, this);
-    goal_sub_ = nh_.subscribe("/move_base_simple/goal/bug", 50, &TangentBug::goalCallback, this);
+    scan_sub_ = nh_.subscribe("/scan", 1, &TangentBug::scanCallback, this);
+    odom_sub_ = nh_.subscribe("/odom", 1, &TangentBug::odomCallback, this);
+    goal_sub_ = nh_.subscribe("/move_base_simple/goal/bug", 1, &TangentBug::goalCallback, this);
 
-    cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 50);
+    cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
     marker_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
     // Initialize parameters with default values and log them
-    nh_.param("goal_tolerance", goal_tolerance_, 0.2);
+    ros::NodeHandle pnh("~");
+    nh_.param("goal_tolerance", goal_tolerance_, 0.10);
     ROS_INFO("Tolerância ao objetivo: %f", goal_tolerance_);
 
     nh_.param("max_linear_speed", max_linear_speed_, 0.5);
@@ -41,46 +36,53 @@ TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh), current_state_(MOVE_TO_GO
     nh_.param("robot_width", robot_width_, 0.5);
     ROS_INFO("Largura do robô: %f", robot_width_);
 
-    nh_.param("safety_margin", safety_margin_, 0.3);
+    nh_.param("safety_margin", safety_margin_, 0.5);
     ROS_INFO("Margem de segurança: %f", safety_margin_);
 
-    nh_.param("obstacle_threshold", obstacle_threshold_, 0.05);
+    nh_.param("obstacle_threshold", obstacle_threshold_, 0.6);
     ROS_INFO("Limite de obstáculo: %f", obstacle_threshold_);
 
-    nh_.param("gap_threshold", gap_threshold_, 0.2);
+    nh_.param("gap_threshold", gap_threshold_, 0.8);
     ROS_INFO("Limite de lacuna: %f", gap_threshold_);
 
+    nh_.param("segment_switch_threshold_percent", segment_switch_threshold_percent_, 0.05); // 5% como padrão
+    ROS_INFO("Limiar de troca de segmento (percentual): %f", segment_switch_threshold_percent_);
+
+    // Inicializa o estado interno de girar - e - avançar current_turn_then_move_state_ = ALIGNING_TO_POINT;
+    // Marca o ponto alvo como inválido para garantir que a primeira chamada o defina.
+    target_point_for_turn_then_move_.x = std::numeric_limits<double>::quiet_NaN();
+    target_point_for_turn_then_move_.y = std::numeric_limits<double>::quiet_NaN();
+    target_point_for_turn_then_move_.z = 0.0;
+
+    // Define a tolerância para considerar o alinhamento completo (ex: 0.05 rad ~ 2.8 graus)
+    nh_.param("alignment_tolerance_rad", alignment_tolerance_rad_, 0.05);
+    ROS_INFO("Tolerância de alinhamento (radianos): %f", alignment_tolerance_rad_);
+
     // Initialize variables
-    min_distance_to_goal_ = std::numeric_limits<double>::max();
-    best_distance_to_goal_ = std::numeric_limits<double>::max();
+    current_stable_best_segment_distance_ = std::numeric_limits<double>::max();
+    d_reach_ = std::numeric_limits<double>::max();
 
     // Initialize goal to NaN
     goal_x_ = std::numeric_limits<double>::quiet_NaN();
     goal_y_ = std::numeric_limits<double>::quiet_NaN();
-    geometry_msgs::Point best_leave_point_;
+
+    // Inicializa o timer de controle para chamar computeControl periodicamente
+    // É crucial para o comportamento não-bloqueante do nó.
+    control_timer_ = nh_.createTimer(ros::Duration(1.0 / 60.0), &TangentBug::computeControl, this); // 60 Hz
+    ROS_INFO("TangentBug node initialized. Waiting for goal...");
+    clearAllSpheresAndSegments();
+    stopRobot(); // Garante que o robô comece parado
 }
 
 void TangentBug::scanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
 {
-    if (msg->ranges.empty())
-    {
-        ROS_WARN("Varredura LIDAR recebida está vazia.");
-        return;
-    }
-
-    // Verificar se todas as leituras são válidas
-    for (const auto &range : msg->ranges)
-    {
-        if (std::isnan(range) || range < 0.0)
-        {
-            ROS_WARN("Valor inválido encontrado na varredura LIDAR.");
-            return;
-        }
-    }
-
-    laser_ranges_ = msg->ranges;
-    current_scan_ = *msg; // Atualiza a varredura atual para cálculos futuros
+    std::lock_guard<std::mutex> lk(scan_mutex_);
+    current_scan_ = *msg;
     // ROS_INFO("Varredura LIDAR recebida: %zu leituras", msg->ranges.size());
+
+    const int num_ranges_valid = std::count_if(current_scan_.ranges.begin(), current_scan_.ranges.end(),
+                                               [](float range)
+                                               { return !std::isnan(range) && range > 0.0 && std::isfinite(range); });
 }
 
 void TangentBug::odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
@@ -105,179 +107,736 @@ void TangentBug::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 
     // Verificar se o objetivo está muito próximo da posição atual
     double distance_to_goal = calculateDistance(current_pose_.position.x, current_pose_.position.y, msg->pose.position.x, msg->pose.position.y);
-    if (distance_to_goal < goal_tolerance_)
-    {
-        ROS_INFO("Objetivo muito próximo, não é necessário movimento.");
-        return;
-    }
 
-    goal_x_ = msg->pose.position.x;                              // Novo objetivo X
-    goal_y_ = msg->pose.position.y;                              // Novo objetivo Y
-    best_distance_to_goal_ = std::numeric_limits<double>::max(); // Reseta a melhor distância
+    point_goal_ = msg->pose.position; // Atualiza o ponto objetivo
+    goal_x_ = msg->pose.position.x;   // Novo objetivo X
+    goal_y_ = msg->pose.position.y;   // Novo objetivo Y
 
     ROS_INFO("Novo objetivo recebido: Posição [%f, %f], Distância para o objetivo: %f", goal_x_, goal_y_, distance_to_goal);
 
     // Inserir o marcador de destino no Gazebo
     spawnGoalMarker(goal_x_, goal_y_);
-
-    // Reseta para estado MOVE_TO_GOAL
-    current_state_ = MOVE_TO_GOAL;
 }
 
 void TangentBug::navigate()
 {
     stopRobot();
-    ros::Rate rate(100);
-    while (ros::ok())
-    {
-        std::cout << "TangentBug::navigate()" << std::endl;
-        computeControl();
-        ros::spinOnce();
-    }
+    // ros::Rate rate(100);
+    // while (ros::ok())
+    // {
+    //     std::cout << "TangentBug::navigate()" << std::endl;
+    //     followContour();
+    //     computeControl();
+    //     ros::spinOnce();
+    // }
 }
 
-void TangentBug::computeControl()
+void TangentBug::computeControl(const ros::TimerEvent &event)
 {
-
-    const auto &robot_position = current_pose_.position;
-    geometry_msgs::Point goal_position;
-    goal_position.x = 5;
-    goal_position.y = 5;
-    goal_position.z = 0.0;
-
-    const auto segments = extractObstacleSegments2D(current_scan_, 0.8); // Atualiza os segmentos de obstáculos
-    std::cout << "obstacle_segments.size(): " << segments.size() << std::endl;
-
-    if (segments.empty())
-    {
-        ROS_WARN("No obstacle segments to follow.");
-        return;
-    }
-
-    // Track best distance to goal during boundary following
-    double current_distance_to_goal = calculateDistance(robot_position.x, robot_position.y, goal_position.x, goal_position.y);
-    if (current_distance_to_goal < best_distance_to_goal_)
-    {
-        best_distance_to_goal_ = current_distance_to_goal;
-        best_leave_point_ = robot_position;
-        std::cout << "best_leave_point_: " << best_leave_point_.x << ", " << best_leave_point_.y << std::endl;
-    }
-
-    // Select the best segment (closest to goal by endpoint)
-    auto best_segment = findBestSegmentTowardGoal(segments, goal_position);
-    std::cout << "best_segment.size(): " << best_segment.size() << std::endl;
-
-    // Simplify the segment to reduce noise
-    best_segment = simplifySegment(best_segment, 0.5, 5.0);
-    std::cout << "best_segment.size(): " << best_segment.size() << std::endl;
-
-    if (best_segment.empty())
-    {
-        ROS_WARN("No valid segment for following.");
-        return;
-    }
-
-    // Offset segment toward robot using perspective
-    auto offset_path = offsetSegmentTowardRobotPerspective(best_segment, robot_position, 30.0);
-    if (offset_path.empty())
-    {
-        ROS_WARN("Offset path is empty.");
-        return;
-    }
-
-    // Spawn spheres at offset points for visualization
-    for (const auto &pt : offset_path)
-    {
-        spawnSphereAt(pt.x, pt.y, 0.1, "#FF0000", 10); // Spawn sphere at offset point
-    }
-
-    const auto closest_point = findClosestEndpointToPoint(offset_path, robot_position);
-    std::cout << "closest_point: " << closest_point.x << ", " << closest_point.y << std::endl;
-
-    // Sort offset points by distance to goal (TangentBug heuristic)
-    // std::sort(offset_path.begin(), offset_path.end(), [&](const auto &a, const auto &b)
-    //           {
-    //     double da = std::hypot(goal_position.x - a.x, goal_position.y - a.y);
-    //     double db = std::hypot(goal_position.x - b.x, goal_position.y - b.y);
-    //     return da < db; });
-
-    // for (const auto &pt : offset_path)
-    // {
-    // const
-    spawnSphereAt(closest_point.x, closest_point.y, 0.6, "#00FF00", 10); // Spawn sphere at offset point
-    std::cout << "closest_point: " << closest_point.x << ", " << closest_point.y << std::endl;
-    moveToPoint(closest_point.x, closest_point.y);
-    std::cout << "Stopping robot..." << std::endl;
-    stopRobot();
-    std::cout << "Robot stopped." << std::endl;
-    // deleteAllSpheres();
-
-    // double dist = std::hypot(current_pose_.position.x - pt.x,
-    //                          current_pose_.position.y - pt.y);
-    // if (dist < goal_tolerance_)
-    // {
-    //     stopRobot();
-    //     break;
-    // }
-    // }
-
-    return;
-
     if (std::isnan(goal_x_) || std::isnan(goal_y_))
     {
+        stopRobot(); // Publica 0 para evitar movimento inesperado
         ROS_WARN_THROTTLE(5, "Aguardando um objetivo válido...");
         return;
     }
-    followContour();
-    return;
-    const std::vector<std::vector<geometry_msgs::Point>> &obstacle_segments = extractObstacleSegments2D(current_scan_, 0.8); // Atualiza os segmentos de obstáculos
-    std::cout << "obstacle_segments.size(): " << obstacle_segments.size() << std::endl;
-    return;
-    const double distance_to_goal = calculateDistance(current_pose_.position.x, current_pose_.position.y, goal_x_, goal_y_);
+
+    if (current_scan_.ranges.empty() || std::isnan(current_pose_.position.x) || std::isnan(goal_x_))
+    {
+        ROS_WARN_THROTTLE(5, "Aguardando dados LIDAR, odometria ou objetivo válido para iniciar o controle.");
+        stopRobot();
+        return;
+    }
+
+    if (robot_trajectory_history_.empty())
+    {
+        // Marca a posição inicial do robô
+        geometry_msgs::Point initial_position = current_pose_.position;
+        robot_trajectory_history_.push_back(initial_position);
+        spawnSphereAt(initial_position.x, initial_position.y, 0.0, "#FFFFFF"); // Marca a posição inicial do robô no Gazebo
+    }
+
+    // const geometry_msgs::Point last_robot_position = robot_trajectory_history_.back();
+    // if (calculateDistance(last_robot_position.x, last_robot_position.y, current_pose_.position.x, current_pose_.position.y) > 0.1 || robot_trajectory_history_.size() == 1)
+    // {
+    //     // Adiciona a nova posição do robô ao histórico
+    //     robot_trajectory_history_.push_back(current_pose_.position);
+    //     spawnSphereAt(current_pose_.position.x, current_pose_.position.y, 0.0, "#FFFFFE"); // Marca a nova posição do robô no Gazebo
+    //     clearAllSpheresAndSegments("segment_");
+    // }
+    // else
+    // {
+    //     ROS_DEBUG("A posição do robô não mudou significativamente desde a última atualização. Ignorando.");
+    //     return; // Ignora se a posição do robô não mudou significativamente
+    // }
+
+    const auto &robot_position = current_pose_.position;
+    geometry_msgs::Twist cmd_vel;
+
+    double distance_to_goal = calculateDistance(robot_position.x, robot_position.y, goal_x_, goal_y_);
     ROS_INFO("Distância ao objetivo: %f", distance_to_goal);
+    spawnSphereAt(goal_x_, goal_y_, 0.0, "#FF0000"); // Atualiza o marcador do objetivo no Gazebo
 
     // Verifica se o robô já está no objetivo
     if (distance_to_goal < goal_tolerance_)
     {
         ROS_INFO("Objetivo alcançado!");
         stopRobot();
+        current_state_ = MOVE_TO_GOAL;                      // Reseta o estado
+        goal_x_ = std::numeric_limits<double>::quiet_NaN(); // Reseta o objetivo
+        goal_y_ = std::numeric_limits<double>::quiet_NaN(); // Reseta o objetivo
         return;
     }
 
+    sensor_msgs::LaserScan scan;
+    {
+        std::lock_guard<std::mutex> lk(scan_mutex_);
+        if (current_scan_.ranges.empty())
+            return;
+        scan = current_scan_; // cópia local estável
+    }
+
+    // Obtém os segmentos de obstáculos do LIDAR
+    std::cout << "Extraindo segmentos de obstáculos do LIDAR..." << std::endl;
+    std::cout << "Número de leituras do LIDAR: " << scan.ranges.size() << std::endl;
+
+    // for (size_t i = 0; i < scan.ranges.size(); ++i)
+    // {
+    //     std::cout << "Leitura " << i << ": " << scan.ranges[i] << std::endl;
+    // }
+
+    const int num_ranges_valid = std::count_if(scan.ranges.begin(), scan.ranges.end(),
+                                               [](float range)
+                                               { return !std::isnan(range) && range > 0.0 && std::isfinite(range); });
+    std::cout << "Número de leituras válidas do LIDAR: " << num_ranges_valid << std::endl;
+
+    const std::vector<std::vector<geometry_msgs::Point>> global_segments = extractObstacleSegments2D(scan, gap_threshold_);
+    std::cout << "Número de segmentos globais: " << global_segments.size() << std::endl;
+    // Segmentos simplificados
+    std::vector<std::vector<geometry_msgs::Point>> simplified_segments = std::vector<std::vector<geometry_msgs::Point>>();
+
+    // Percorre todos os segmentos globais e simplifica cada um deles
+    for (const auto &segment : global_segments)
+    {
+        // Simplifica cada segmento
+        std::vector<geometry_msgs::Point> simplified_segment = simplifySegment(segment, robot_width_, 30.0);
+        //  simplified_segment = offsetSegmentTowardRobotPerspective(simplified_segment, robot_position, 30.0);
+        if (!simplified_segment.empty())
+        {
+            simplified_segments.push_back(simplified_segment);
+        }
+    }
+
+    for (const auto &segment : simplified_segments)
+    {
+        std::cout << "Segmento simplificado: ";
+        for (const auto &point : segment)
+        {
+            std::cout << "(" << point.x << ", " << point.y << ") ";
+            spawnSphereAt(point.x, point.y, 0.0, "#00FF00", 1); // Marca os pontos do segmento simplificado no Gazebo
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "Número de segmentos simplificados: " << simplified_segments.size() << std::endl;
+    const int total_points_global_segments = std::accumulate(global_segments.begin(), global_segments.end(), 0,
+                                                             [](int sum, const std::vector<geometry_msgs::Point> &segment)
+                                                             { return sum + segment.size(); });
+
+    const int total_points_simplified_segments = std::accumulate(simplified_segments.begin(), simplified_segments.end(), 0,
+                                                                 [](int sum, const std::vector<geometry_msgs::Point> &segment)
+                                                                 { return sum + segment.size(); });
+
+    ROS_DEBUG("Total de pontos nos segmentos globais: %d, Total de pontos nos segmentos simplificados: %d", total_points_global_segments, total_points_simplified_segments);
+    std::cout << "Total de pontos nos segmentos globais: " << total_points_global_segments
+              << ", Total de pontos nos segmentos simplificados: " << total_points_simplified_segments << std::endl;
+
+    const std::vector<geometry_msgs::Point> segment_robot_to_goal = {robot_position, point_goal_};
+
+    // Procura o segmento de reta que intercepta o segmento do robô ao objetivo
+    std::vector<geometry_msgs::Point> intersection_segment;
+
+    // Encontrar a interseção mais próxima
+    double min_dist_intersect = std::numeric_limits<double>::max();
+    double current_min_dist_to_goal = std::numeric_limits<double>::max();
+    geometry_msgs::Point closest_intersection;
+    geometry_msgs::Point closest_point_to_goal;
+    bool found_intersection = false;
+
+    // spawnLineSegment(robot_position.x, robot_position.y, 0.0, goal_x_, goal_y_, 0.0, "#430073"); // Linha do robô ao objetivo
+
+    for (const auto &segment : simplified_segments)
+    {
+        for (size_t i = 0; i + 1 < segment.size(); ++i)
+        {
+            bool intersects;
+            // std::cout << "Verificando o ponto " << i << " do segmento: (" << segment[i].x << ", " << segment[i].y << ")"
+            //           << " até o ponto " << i + 1 << ": (" << segment[i + 1].x << ", " << segment[i + 1].y << ")" << std::endl;
+            // std::cout << "Segmento do robô ao objetivo: (" << segment_robot_to_goal[0].x << ", " << segment_robot_to_goal[0].y << ")"
+            //           << " até (" << segment_robot_to_goal[1].x << ", " << segment_robot_to_goal[1].y << ")" << std::endl;
+
+            IntersectionResult intersection = intersectSegments(segment[i], segment[i + 1],
+                                                                segment_robot_to_goal[0], segment_robot_to_goal[1]);
+
+            geometry_msgs::Point inter = intersection.point;
+            intersects = intersection.intersects;
+
+            // spawnLineSegment(segment[i].x, segment[i].y, 0.0, segment[i + 1].x, segment[i + 1].y, 0.0, "#787878", segment.size()); // Linha do segmento do obstáculo
+
+            double dist = calculateDistance(robot_position.x, robot_position.y, inter.x, inter.y);
+            if (intersects)
+            {
+                intersection_segment = {segment[i], segment[i + 1]};
+                if (dist < min_dist_intersect)
+                {
+                    min_dist_intersect = dist;
+                    closest_intersection = inter;
+                    found_intersection = true;
+                }
+            }
+            if (dist < current_min_dist_to_goal)
+            {
+                current_min_dist_to_goal = dist;
+                closest_point_to_goal = inter;
+            }
+            dist = calculateDistance(segment[i].x, segment[i].y, goal_x_, goal_y_);
+            if (dist < current_min_dist_to_goal)
+            {
+                current_min_dist_to_goal = dist;
+                closest_point_to_goal = segment[i];
+            }
+            if (i + 2 == segment.size())
+            {
+                dist = calculateDistance(segment[i + 1].x, segment[i + 1].y, goal_x_, goal_y_);
+                if (dist < current_min_dist_to_goal)
+                {
+                    current_min_dist_to_goal = dist;
+                    closest_point_to_goal = segment[i + 1];
+                }
+            }
+        }
+    }
+
+    // if (current_min_dist_to_goal > distance_to_goal || current_state_ == MOVE_TO_GOAL)
+    // {
+    //     std::cout << "Podemos ir direto ao objetivo" << std::endl;
+    //     d_reach_point_ = point_goal_;
+    // }
+
+    std::cout << "Estado atual: " << (current_state_ == MOVE_TO_GOAL ? "MOVE_TO_GOAL" : current_state_ == FOLLOW_CONTOUR ? "FOLLOW_CONTOUR"
+                                                                                                                         : "LEAVE_CONTOUR")
+              << std::endl;
+    std::cout << "Tem interseção: " << (found_intersection ? "Sim" : "Não") << std::endl;
+    std::cout << "d_reach_:                     " << d_reach_ << std::endl;
+    std::cout << "distance_to_goal:             " << distance_to_goal << std::endl;
+    std::cout << "current_min_dist_to_goal:     " << current_min_dist_to_goal << std::endl;
+    std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
+    std::cout << "Ponto atual do robô:          (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
+
+    // Indo para o objetivo
+    if (current_state_ == MOVE_TO_GOAL)
+    {
+        current_min_dist_to_goal = current_min_dist_to_goal == std::numeric_limits<double>::max() ? distance_to_goal : current_min_dist_to_goal;
+        if (current_min_dist_to_goal > distance_to_goal || found_intersection)
+        {
+            current_state_ = FOLLOW_CONTOUR;
+            std::cout << "Vamos ter que seguir a borda" << std::endl;
+            // d_reach_point_ = intersection_segment[0]; // Inicializa com o primeiro ponto do primeiro segmento
+            d_reach_point_ = simplified_segments[0][1]; // Inicializa com o primeiro ponto do primeiro segmento
+        }
+        else
+        {
+            std::cout << "Podemos ir direto ao objetivo" << std::endl;
+            d_reach_point_ = point_goal_;
+            // d_reach_ = distance_to_goal; // Eu acho que tem que ser assim
+        }
+    }
+    else if (current_state_ == FOLLOW_CONTOUR)
+    {
+
+        if (current_min_dist_to_goal < d_reach_)
+        {
+            std::cout << "G2 não é vazio" << std::endl;
+            d_reach_point_ = closest_point_to_goal;
+            current_state_ = LEAVE_CONTOUR;
+        }
+        else
+        {
+            std::cout << "Continuando a seguir o contorno" << std::endl;
+            d_reach_point_ = simplified_segments[0][1]; // Continua indo para o primeiro ponto do primeiro segmento
+            // d_reach_point_ = closest_point_to_goal;
+        }
+        d_reach_ = distance_to_goal < d_reach_ ? distance_to_goal : d_reach_;
+
+        // else
+        // {
+        //     d_reach_point_ = closest_point_to_goal;
+        //     d_reach_ = current_min_dist_to_goal;
+        //     std::cout << "G2 é vazio" << std::endl;
+        // }
+    }
+    else if (current_state_ == LEAVE_CONTOUR)
+    {
+        if (distance_to_goal < d_reach_)
+        {
+            current_state_ = MOVE_TO_GOAL;
+            d_reach_point_ = point_goal_;
+            // d_reach_ = distance_to_goal;
+            std::cout << "Voltando para motion-to-goal" << std::endl;
+        }
+    }
+
+    std::cout << "d_reach_: " << d_reach_ << std::endl;
+    std::cout << "Distância ao objetivo: " << distance_to_goal << std::endl;
+    std::cout << "Distância mínima atual ao objetivo: " << current_min_dist_to_goal << std::endl;
+    std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
+    std::cout << "Ponto atual do robô: (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
+
+    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#FFFF00", 1); // Atualiza o marcador do ponto de alcance no Gazebo
+
+    std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
+    moveToPoint(d_reach_point_.x, d_reach_point_.y);
+    // Espera 1 segundo
+    ros::Duration(1.0).sleep();
+    stopRobot(); // Garante que o robô pare antes de mudar de direção
+
+    return;
+
+    if (current_min_dist_to_goal < d_reach_)
+    {
+        ROS_DEBUG("Ponto mais próximo do objetivo encontrado: (%.2f, %.2f)", closest_point_to_goal.x, closest_point_to_goal.y);
+        std::cout << "Ponto mais próximo do objetivo encontrado com distância mínima: " << current_min_dist_to_goal << std::endl;
+        d_reach_ = current_min_dist_to_goal;    // Atualiza a distância de alcance
+        d_reach_point_ = closest_point_to_goal; // Atualiza o ponto do obstáculo mais próximo do objetivo
+    }
+    else
+    {
+        ROS_DEBUG("Nenhum ponto mais próximo do objetivo encontrado.");
+        std::cout << "Nenhum ponto mais próximo do objetivo encontrado." << std::endl;
+    }
+
+    std::string color_hex;
+    if (found_intersection)
+    {
+        color_hex = "#FF0000"; // Vermelho para interseção encontrada
+        // d_reach_ = min_dist_intersect;
+        // d_reach_point_ = closest_intersection; // Atualiza o ponto do obstáculo mais próximo do objetivo
+        std::cout << "Existe obstáculo entre o robô e o objetivo." << std::endl;
+        std::cout << "Ponto de interseção mais próximo do robô: (" << closest_intersection.x << ", " << closest_intersection.y << ")" << std::endl;
+        std::cout << "Interseção encontrada com distância mínima: " << min_dist_intersect << std::endl;
+        ROS_DEBUG("Interseção encontrada: (%.2f, %.2f)", closest_intersection.x, closest_intersection.y);
+    }
+    else
+    {
+        color_hex = "#00FF00"; // Verde para nenhuma interseção encontrada
+        // d_reach_ = distance_to_goal;
+        // d_reach_point_ = robot_position; // Se não houver interseção, usa a posição atual do robô
+        std::cout << "Nenhum obstáculo entre o robô e o objetivo." << std::endl;
+        std::cout << "Point do robô usado como ponto de alcance: (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
+        std::cout << "Nenhuma interseção encontrada entre o robô e o objetivo." << std::endl;
+        ROS_DEBUG("Nenhuma interseção encontrada entre o robô e o objetivo.");
+    }
+
+    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, color_hex);                                             // Atualiza o marcador do ponto de alcance no Gazebo
+    spawnLineSegment(robot_position.x, robot_position.y, 0.0, d_reach_point_.x, d_reach_point_.y, 0.0, color_hex); // Atualiza o marcador do segmento entre o robô e o ponto de alcance no Gazebo
+
+    if (min_dist_intersect < std::numeric_limits<double>::max())
+    {
+        found_intersection = true;
+        intersection_segment.push_back(closest_intersection);
+        intersection_segment.push_back(point_goal_);
+        ROS_DEBUG("Interseção encontrada: (%.2f, %.2f)", closest_intersection.x, closest_intersection.y);
+        std::cout << "Interseção encontrada com distância mínima: " << min_dist_intersect << std::endl;
+        d_reach_ = min_dist_intersect; // Atualiza a distância de alcance
+    }
+    else
+    {
+        ROS_DEBUG("Nenhuma interseção encontrada entre o robô e o objetivo.");
+        std::cout << "Nenhuma interseção encontrada entre o robô e o objetivo." << std::endl;
+        d_reach_ = distance_to_goal; // Se não houver interseção, usa a distância direta
+    }
+
+    // Encontra o ponto do segmento mais próximo do objetivo
+    geometry_msgs::Point closest_point_on_segment;
+    double min_distance_to_segment = std::numeric_limits<double>::max();
+    for (const auto &segment : simplified_segments)
+    {
+        for (size_t i = 0; i + 1 <= segment.size(); ++i)
+        {
+            geometry_msgs::Point point_on_segment = segment[i];
+            // spawn segment from point_on_segment to goal for visualization
+            spawnLineSegment(point_on_segment.x, point_on_segment.y, 0.0, point_goal_.x, point_goal_.y, 0.0, "#00FFFF"); // Linha do ponto do segmento ao objetivo
+            double dist = calculateDistance(point_on_segment.x, point_on_segment.y, point_goal_.x, point_goal_.y);
+            if (dist < min_distance_to_segment)
+            {
+                min_distance_to_segment = dist;
+                closest_point_on_segment = point_on_segment;
+            }
+        }
+    }
+
+    spawnSphereAt(closest_point_on_segment.x, closest_point_on_segment.y, 0.0, "#0000FF", 1); // Atualiza o marcador do ponto mais próximo do segmento no Gazebo
+
+    spawnLineSegment(robot_position.x, robot_position.y, 0.0, closest_point_on_segment.x, closest_point_on_segment.y, 0.0, "#0000FF"); // Atualiza o marcador do segmento entre o robô e o ponto mais próximo do segmento no Gazebo
+
+    // Atualiza a distância seguida
+    d_followed_ = min_distance_to_segment;
+
+    std::cout << "d_followed_: " << d_followed_ << std::endl;
+    std::cout << "d_reach_: " << d_reach_ << std::endl;
+    const bool follow = (d_followed_ < d_reach_);
+    std::cout << "Seguir a borda: " << follow << std::endl;
+    // Calcula a distância heurística
+    heuristic_distance_ = d_followed_ + d_reach_;
+    std::cout << "Distância heurística calculada: " << heuristic_distance_ << std::endl;
+
+    if (follow)
+    {
+        // moveToPoint(closest_point_on_segment.x, closest_point_on_segment.y);
+    }
+    else
+    {
+        // moveToPoint(goal_x_, goal_y_);
+    }
+
+    // cmd_vel.angular.z; // TODO verificar a velocidade angular para ignorar a detecção de obstáculos.
+    // cmd_vel_pub_.publish(cmd_vel);
+    return;
     // Decisão baseada no estado atual
     switch (current_state_)
     {
     case MOVE_TO_GOAL:
         ROS_INFO("State: MOVE_TO_GOAL");
-        if (isPathClear(calculateHeadingToGoal(), obstacle_threshold_) == 1)
+        cmd_vel = calculateMoveToPointCommand(goal_x_, goal_y_);
+
+        if (isPathClear(calculateHeadingToGoal(), obstacle_threshold_) != 1)
         {
-            moveToGoal(distance_to_goal);
-        }
-        else
-        {
-            ROS_INFO("Obstacle detected, changing state to FOLLOW_CONTOUR.");
-            ROS_INFO("State transition: MOVE_TO_GOAL → FOLLOW_CONTOUR");
+            ROS_INFO("Obstáculo detectado no caminho direto. Transição: MOVE_TO_GOAL -> FOLLOW_CONTOUR");
             current_state_ = FOLLOW_CONTOUR;
+            // Salvar o ponto de entrada no contorno
+            cmd_vel = geometry_msgs::Twist(); // Publicar zero ou recalcular imediatamente para FOLLOW_CONTOUR
         }
         break;
     case FOLLOW_CONTOUR:
         ROS_INFO("State: FOLLOW_CONTOUR");
-        followContour();
+        // tempPoint = tempPoint == geometry_msgs::Point() ? current_pose_.position : tempPoint; // Se tempPoint não foi definido, usa a posição atual
+        cmd_vel = calculateFollowContourCommand(); // TODO ignorar os obstáculos fora do cone e do retangulo de colisão
+
+        // moveToPoint(tempPoint.x, tempPoint.y); // Move para o ponto temporário
+
         if (isPathClear(calculateHeadingToGoal(), obstacle_threshold_) == 1)
         {
-            ROS_INFO("Clear line of sight, changing state to LEAVE_CONTOUR.");
-            stopRobot();
-            // current_state_ = LEAVE_CONTOUR;
-            ROS_INFO("State transition: FOLLOW_CONTOUR → MOVE_TO_GOAL");
-            current_state_ = MOVE_TO_GOAL; // Mudar para MOVE_TO_GOAL diretamente
+            ROS_INFO("Caminho claro para o objetivo e distância melhorada. Transição: FOLLOW_CONTOUR -> MOVE_TO_GOAL");
+            current_state_ = MOVE_TO_GOAL;
+            cmd_vel = geometry_msgs::Twist();
         }
+
         break;
     default:
         ROS_ERROR("Unknown state encountered!");
         stopRobot();
-        break;
+        return;
     }
+
     ROS_INFO("Estado atual: %d", current_state_);
+    cmd_vel.angular.z; // TODO verificar a velocidade angular para ignorar a detecção de obstáculos.
+    cmd_vel_pub_.publish(cmd_vel);
+    ROS_DEBUG("Publicando cmd_vel: linear.x=%.2f, angular.z=%.2f", cmd_vel.linear.x, cmd_vel.angular.z);
+}
+
+// Refatorada para calcular e retornar Twist
+geometry_msgs::Twist TangentBug::calculateMoveToGoalCommand(double distance_to_goal)
+{
+    geometry_msgs::Twist cmd_vel;
+
+    const double goal_heading = calculateHeadingToGoal();
+    const double robot_yaw = tf::getYaw(current_pose_.orientation);
+    double heading_error = goal_heading - robot_yaw;
+    heading_error = normalizeAngle(heading_error);
+
+    cmd_vel.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, heading_error * 1.5));
+
+    if (std::abs(heading_error) < (M_PI / 6.0)) // Allow up to 30 degrees tolerance (M_PI / 6)
+    {
+        cmd_vel.linear.x = std::min(max_linear_speed_, distance_to_goal * 0.7);
+    }
+    else
+    {
+        cmd_vel.linear.x = 0.0; // Stop forward motion while turning
+    }
+    ROS_DEBUG("MoveToGoal: dist=%.2f, error=%.2f, lin=%.2f, ang=%.2f",
+              distance_to_goal, heading_error, cmd_vel.linear.x, cmd_vel.angular.z);
+    return cmd_vel;
+}
+
+// Refatorada para calcular e retornar Twist
+// geometry_msgs::Twist TangentBug::calculateFollowContourCommand()
+// {
+//     geometry_msgs::Twist cmd_vel;
+
+//     if (current_scan_.ranges.empty())
+//     {
+//         ROS_WARN_THROTTLE(1.0, "Cannot follow contour, LIDAR data is empty. Stopping.");
+//         return geometry_msgs::Twist();
+//     }
+
+//     const auto &robot_position = current_pose_.position;
+//     geometry_msgs::Point current_goal_position;
+//     current_goal_position.x = goal_x_;
+//     current_goal_position.y = goal_y_;
+//     current_goal_position.z = 0.0;
+
+//     double current_distance_to_goal = calculateDistance(robot_position.x, robot_position.y, current_goal_position.x, current_goal_position.y);
+
+//     if (current_distance_to_goal < best_distance_to_goal_)
+//     {
+//         best_distance_to_goal_ = current_distance_to_goal;
+//         best_leave_point_ = robot_position;
+//         ROS_DEBUG_THROTTLE(1.0, "Updated best_leave_point_: (%.2f, %.2f) with distance %.2f", best_leave_point_.x, best_leave_point_.y, best_distance_to_goal_);
+//         std::cout << " Updated: Melhor distância ao objetivo: " << best_distance_to_goal_ << std::endl;
+//     }
+
+//     // EXTRAÇÃO DE SEGMENTOS COM TODOS OS PONTOS DENTRO DO CONE OU DO QUADRADO DE COLISÃO
+//     const auto global_segments = extractObstacleSegments2D(current_scan_, gap_threshold_);
+
+//     if (global_segments.empty())
+//     {
+//         ROS_WARN_THROTTLE(1.0, "No obstacle segments to follow. Rotating in place to find one.");
+//         cmd_vel.linear.x = 0.0;
+//         cmd_vel.angular.z = rotation_speed_; // Gira para tentar encontrar um obstáculo
+//         // cmd_vel.angular.z = 0.0; // Gira para tentar encontrar um obstáculo
+//         return cmd_vel;
+//     }
+
+//     // Seleciona o melhor segmento (o mais próximo do objetivo), olha apenas o ponto inicial e o final do segmento
+//     std::vector<geometry_msgs::Point> candidate_segment = findBestSegmentTowardGoal(global_segments, current_goal_position);
+//     double candidate_distance_to_goal = std::numeric_limits<double>::max();
+
+//     if (!candidate_segment.empty())
+//     {
+//         // Encontra o ponto mais próximo do objetivo no segmento candidato
+//         geometry_msgs::Point endpoint_candidate = findClosestEndpointToPoint(candidate_segment, current_goal_position);
+//         candidate_distance_to_goal = calculateDistance(endpoint_candidate.x, endpoint_candidate.y, current_goal_position.x, current_goal_position.y);
+//     }
+
+//     bool segment_is_significantly_better =
+//         (candidate_distance_to_goal < current_stable_best_segment_distance_ * (1.0 - segment_switch_threshold_percent_));
+//     if (current_stable_best_segment_.empty() || segment_is_significantly_better || candidate_segment.empty())
+//     {
+//         if (!candidate_segment.empty())
+//         {
+//             current_stable_best_segment_ = candidate_segment;
+//             current_stable_best_segment_distance_ = candidate_distance_to_goal;
+//             ROS_INFO_THROTTLE(2.0, "Switched to new stable best segment (%.2f%% better). New best dist: %.2f",
+//                               segment_switch_threshold_percent_ * 100.0, current_stable_best_segment_distance_);
+//         }
+//         else
+//         {
+//             ROS_WARN_THROTTLE(1.0, "Candidate segment is empty, holding previous best segment if available.");
+//             if (current_stable_best_segment_.empty()) // TODO talvez verificar se devo ir direto para o destino
+//             {
+//                 cmd_vel.linear.x = 0.0;
+//                 cmd_vel.angular.z = rotation_speed_;
+//                 return cmd_vel;
+//             }
+//         }
+//     }
+
+//     if (current_stable_best_segment_.empty())
+//     {
+//         ROS_WARN_THROTTLE(1.0, "No stable segment to follow after hysteresis. Rotating.");
+//         cmd_vel.linear.x = 0.0;
+//         cmd_vel.angular.z = rotation_speed_;
+//         return cmd_vel;
+//     }
+
+//     // Simplifica o segmento para reduzir ruído e redundância, deve conter apenas 2 pontos(por conta da etapa de extractObstacleSegments2D)
+//     // Parâmetros: min_distance (0.5), angle_tolerance_deg (5.0)
+//     std::vector<geometry_msgs::Point> path_to_follow = simplifySegment(current_stable_best_segment_, 0.5, 5.0);
+
+//     if (path_to_follow.empty())
+//     {
+//         ROS_WARN_THROTTLE(1.0, "Simplified stable segment is empty. Cannot follow contour. Rotating.");
+//         cmd_vel.linear.x = 0.0;
+//         cmd_vel.angular.z = rotation_speed_;
+//         return cmd_vel;
+//     }
+
+//     for (size_t i = 0; i < path_to_follow.size(); ++i)
+//     {
+//         std::cout << "Segmento ponto " << i << ": (" << path_to_follow[i].x << ", " << path_to_follow[i].y << ")" << std::endl;
+//         spawnSphereAt(path_to_follow[i].x, path_to_follow[i].y, 0.1, "#FF0000", 10);
+//     }
+
+//     // Aplica offset ao segmento (afastando-o do obstáculo) para garantir segurança
+//     auto offset_path = offsetSegmentTowardRobot(path_to_follow, robot_position, safety_margin_ * 100.0);
+
+//     if (offset_path.empty())
+//     {
+//         ROS_WARN_THROTTLE(1.0, "Offset path for stable segment is empty. Cannot follow contour. Rotating.");
+//         cmd_vel.linear.x = 0.0;
+//         cmd_vel.angular.z = rotation_speed_;
+//         return cmd_vel;
+//     }
+
+//     std::cout << "Segmento offsetado: " << offset_path.size() << " pontos." << std::endl;
+
+//     for (size_t i = 0; i < offset_path.size(); ++i)
+//     {
+//         std::cout << "Ponto " << i << ": (" << offset_path[i].x << ", " << offset_path[i].y << ")" << std::endl;
+//         spawnSphereAt(offset_path[i].x, offset_path[i].y, 0.1, "#0000FF", 10);
+//     }
+
+//     // O ponto que o robô deve seguir é o mais próximo do robô no caminho offset.
+//     const auto closest_point_on_offset = findClosestEndpointToPoint(offset_path, robot_position);
+//     ROS_DEBUG("Closest point on offset path: (%.2f, %.2f)", closest_point_on_offset.x, closest_point_on_offset.y);
+//     std::cout << "Ponto mais próximo no caminho offset: (" << closest_point_on_offset.x << ", " << closest_point_on_offset.y << ")" << std::endl;
+
+//     // Visualizar o ponto para onde o robô está se direcionando
+//     spawnSphereAt(closest_point_on_offset.x, closest_point_on_offset.y, 0.2, "#00FF00", 5);
+
+//     // Agora, calcule o comando de velocidade para ir até `closest_point_on_offset`
+//     // Use a função calculateMoveToPointCommand para isso.
+//     cmd_vel = calculateMoveToPointCommand(closest_point_on_offset.x, closest_point_on_offset.y);
+
+//     // No modo de contorno, você geralmente quer uma velocidade linear constante
+//     // e ajustar a angular.
+//     cmd_vel.linear.x = contour_speed_; // Mantém a velocidade linear desejada para o contorno
+
+//     // Se o calculateMoveToPointCommand já calcula linear.x, você pode sobrescrevê-lo aqui
+//     // para garantir que a velocidade linear seja sempre a contour_speed_
+//     // ou integrar melhor a lógica de "ir para o ponto" com a "velocidade de contorno".
+
+//     // Exemplo: se calculateMoveToPointCommand retorna uma velocidade linear muito baixa porque está quase alinhado,
+//     // ainda queremos mover na velocidade de contorno.
+//     if (std::abs(cmd_vel.angular.z) < 0.2)
+//     { // Se estiver bem alinhado
+//         cmd_vel.linear.x = contour_speed_;
+//     }
+//     else
+//     {
+//         cmd_vel.linear.x = contour_speed_ * 0.5; // Reduz a velocidade linear enquanto gira muito
+//     }
+
+//     ROS_DEBUG("FollowContour: linear=%.2f, angular=%.2f", cmd_vel.linear.x, cmd_vel.angular.z);
+//     return cmd_vel;
+// }
+
+/**
+ * Calcula o comando de velocidade para mover o robô em direção a um ponto específico.
+ */
+// geometry_msgs::Twist TangentBug::calculateMoveToPointCommand(double target_x, double target_y)
+// {
+//     geometry_msgs::Twist cmd;
+//     geometry_msgs::Point p = current_pose_.position;
+
+//     // Verificação de validade da pose atual
+//     if (std::isnan(p.x) || std::isnan(p.y))
+//     {
+//         ROS_WARN_THROTTLE(1.0, "Current robot pose is invalid (NaN) in calculateMoveToPointCommand.");
+//         return geometry_msgs::Twist(); // Retorna comando zero
+//     }
+
+//     double dx = target_x - p.x;
+//     double dy = target_y - p.y;
+//     double distance = std::hypot(dx, dy);
+//     double angle_to_target = atan2(dy, dx);
+//     double yaw = tf::getYaw(current_pose_.orientation);
+//     double angle_error = normalizeAngle(angle_to_target - yaw);
+
+//     // Se o robô já está muito perto do alvo, retorne velocidade zero
+//     if (distance < goal_tolerance_) // Usar 'goal_tolerance_' ou uma nova tolerância para `moveToPoint`
+//     {
+//         ROS_DEBUG("Target point reached: distance=%.2f, angle_error=%.2f", distance, angle_error);
+//         return geometry_msgs::Twist(); // Retorna comando zero
+//     }
+
+//     // Controle angular proporcional
+//     cmd.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, angle_error * 1.5));
+
+//     // Move forward if facing roughly the right direction
+//     if (std::abs(angle_error) < 0.2) // Tolerância angular para avançar (0.2 rad ~ 11.5 graus)
+//     {
+//         cmd.linear.x = std::min(distance * 0.7, max_linear_speed_); // Velocidade linear proporcional à distância
+//     }
+//     else
+//     {
+//         cmd.linear.x = 0.0; // Apenas gira se o erro angular for grande
+//     }
+
+//     ROS_DEBUG("calculateMoveToPointCommand: Target=(%.2f, %.2f), Dist=%.2f, AngleError=%.2f, Lin=%.2f, Ang=%.2f",
+//               target_x, target_y, distance, angle_error, cmd.linear.x, cmd.angular.z);
+
+//     return cmd; // Retorna o comando de velocidade
+// }
+
+geometry_msgs::Twist TangentBug::calculateMoveToPointCommand(double target_x, double target_y)
+{
+    geometry_msgs::Twist cmd;
+
+    const auto &pos = current_pose_.position;
+
+    // Validação básica da pose atual (posição + orientação)
+    if (std::isnan(pos.x) || std::isnan(pos.y))
+    {
+        ROS_WARN_THROTTLE(1.0, "Pose inválida (NaN) em calculateMoveToPointCommand.");
+        return geometry_msgs::Twist(); // zero
+    }
+    // (Opcional) cheque quaternion ~ unitário
+    // const auto& q = current_pose_.orientation;
+    // const double qn2 = q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z;
+    // if (std::fabs(qn2 - 1.0) > 1e-2) { ... }
+
+    std::cout << "Objetivo atual: (" << target_x << ", " << target_y << ")" << std::endl;
+    std::cout << "Pose atual: (" << pos.x << ", " << pos.y << ")" << std::endl;
+
+    const double dx = target_x - pos.x;
+    const double dy = target_y - pos.y;
+    const double distance = std::hypot(dx, dy);
+
+    const double angle_to_target = std::atan2(dy, dx);
+    const double yaw = tf2::getYaw(current_pose_.orientation);
+
+    // Normalização robusta sem depender de normalizeAngle
+    const double angle_error = std::atan2(std::sin(angle_to_target - yaw),
+                                          std::cos(angle_to_target - yaw));
+
+    // Chegou?
+    if (distance < goal_tolerance_)
+    {
+        ROS_DEBUG("Target reached: dist=%.3f, ang_err=%.3f", distance, angle_error);
+        return geometry_msgs::Twist(); // zero
+    }
+
+    // Ganhos (torne parâmetros ROS se possível)
+    const double k_ang = 1.5;
+    const double k_lin = 0.7;
+    const double align_threshold = 0.2; // rad (~11.5°)
+
+    // Saturação angular (C++14-friendly)
+    double w = k_ang * angle_error;
+    if (w > max_angular_speed_)
+        w = max_angular_speed_;
+    if (w < -max_angular_speed_)
+        w = -max_angular_speed_;
+    cmd.angular.z = w;
+
+    // Só avança se estiver razoavelmente alinhado
+    if (std::fabs(angle_error) < align_threshold)
+    {
+        double v = k_lin * distance;
+        if (v > max_linear_speed_)
+            v = max_linear_speed_;
+        cmd.linear.x = v;
+    }
+    else
+    {
+        cmd.linear.x = 0.0;
+    }
+
+    ROS_DEBUG("moveToPointCmd: tgt=(%.2f,%.2f) dist=%.2f ang_err=%.2f v=%.2f w=%.2f",
+              target_x, target_y, distance, angle_error, cmd.linear.x, cmd.angular.z);
+
+    return cmd;
 }
 
 void TangentBug::moveToGoal(double distance_to_goal)
@@ -305,9 +864,6 @@ void TangentBug::moveToGoal(double distance_to_goal)
         ROS_INFO("Obstacle detected on direct path, switching to FOLLOW_CONTOUR.");
         stopRobot();
         current_state_ = FOLLOW_CONTOUR;
-        contour_start_x_ = current_pose_.position.x;
-        contour_start_y_ = current_pose_.position.y;
-        best_distance_to_goal_ = distance_to_goal;
         return;
     }
 
@@ -343,114 +899,69 @@ void TangentBug::moveToGoal(double distance_to_goal)
 
 void TangentBug::followContour()
 {
-    if (current_scan_.ranges.empty())
+    const auto &robot_position = current_pose_.position;
+    geometry_msgs::Point goal_position;
+    goal_position.x = 5;
+    goal_position.y = 5;
+    goal_position.z = 0.0;
+
+    const auto segments = extractObstacleSegments2D(current_scan_, 0.8); // Atualiza os segmentos de obstáculos
+    std::cout << "obstacle_segments.size(): " << segments.size() << std::endl;
+
+    if (segments.empty())
     {
-        ROS_WARN("Cannot follow contour, LIDAR data is empty.");
-        stopRobot();
+        ROS_WARN("No obstacle segments to follow.");
         return;
     }
 
-    geometry_msgs::Twist cmd_vel;
-    cmd_vel.linear.x = contour_speed_; // Safe, predefined contour speed
+    // Track best distance to goal during boundary following
+    double current_distance_to_goal = calculateDistance(robot_position.x, robot_position.y, goal_position.x, goal_position.y);
 
-    const double robot_yaw = tf::getYaw(current_pose_.orientation);
-    const size_t num_ranges = current_scan_.ranges.size();
-    const double angle_increment = current_scan_.angle_increment;
+    // Select the best segment (closest to goal by endpoint)
+    auto best_segment = findBestSegmentTowardGoal(segments, goal_position);
+    std::cout << "best_segment.size(): " << best_segment.size() << std::endl;
 
-    // Identify the closest obstacle to the robot within a reasonable range
-    float min_distance = std::numeric_limits<float>::max();
-    int min_index = -1;
+    // Simplify the segment to reduce noise
+    best_segment = simplifySegment(best_segment, 0.5, 5.0);
+    std::cout << "best_segment.size(): " << best_segment.size() << std::endl;
 
-    for (size_t i = 0; i < num_ranges; ++i)
+    if (best_segment.empty())
     {
-        float range = current_scan_.ranges[i];
-        if (std::isfinite(range) && range < min_distance)
-        {
-            min_distance = range;
-            min_index = i;
-        }
-    }
-
-    // If no valid obstacle detected, rotate to find one
-    if (min_index == -1)
-    {
-        // ROS_WARN("No obstacle detected, rotating to find contour.");
-        // rotateInPlace(rotation_speed_, 0.5);
-        current_state_ = MOVE_TO_GOAL;
+        ROS_WARN("No valid segment for following.");
         return;
     }
 
-    // Calculate angle to closest obstacle
-    double obstacle_angle = current_scan_.angle_min + min_index * angle_increment;
-
-    // Desired contour-following distance from obstacle
-    const double desired_contour_distance = safety_margin_;
-
-    // Control logic: proportional controller to maintain contour distance
-    const double distance_error = min_distance - desired_contour_distance;
-
-    // If obstacle is on the left (positive angle), turn slightly right, and vice versa
-    const double angular_direction = (obstacle_angle > 0) ? -1.0 : 1.0;
-
-    // Adjust angular velocity proportionally to the distance error and angle to the obstacle
-    cmd_vel.angular.z = angular_direction * (0.5 * std::abs(obstacle_angle) + 1.0 * distance_error);
-
-    // Limit angular speed
-    cmd_vel.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, cmd_vel.angular.z));
-
-    // Check periodically if path to goal has become clear
-    if (isPathClear(calculateHeadingToGoal(), obstacle_threshold_) == 1)
+    // Offset segment toward robot using perspective
+    auto offset_path = offsetSegmentTowardRobotPerspective(best_segment, robot_position, 30.0);
+    if (offset_path.empty())
     {
-        ROS_INFO("Clear path detected during contour following, preparing to leave contour.");
-        stopRobot();
-        current_state_ = MOVE_TO_GOAL;
+        ROS_WARN("Offset path is empty.");
         return;
     }
 
-    // Publish the velocity command to follow the contour
-    cmd_vel_pub_.publish(cmd_vel);
+    // Spawn spheres at offset points for visualization
+    for (const auto &pt : offset_path)
+    {
+        spawnSphereAt(pt.x, pt.y, 0.1, "#FF0000", 10); // Spawn sphere at offset point
+    }
 
-    // Debugging output
-    ROS_DEBUG("Following contour: min_dist=%.2f, obstacle_angle=%.2f rad, linear_vel=%.2f m/s, angular_vel=%.2f rad/s",
-              min_distance, obstacle_angle, cmd_vel.linear.x, cmd_vel.angular.z);
+    const auto closest_point = findClosestEndpointToPoint(offset_path, robot_position);
+    std::cout << "closest_point: " << closest_point.x << ", " << closest_point.y << std::endl;
+
+    spawnSphereAt(closest_point.x, closest_point.y, 0.6, "#00FF00", 10); // Spawn sphere at offset point
+    std::cout << "closest_point: " << closest_point.x << ", " << closest_point.y << std::endl;
+    moveToPoint(closest_point.x, closest_point.y);
+    std::cout << "Stopping robot..." << std::endl;
+    stopRobot();
+    std::cout << "Robot stopped." << std::endl;
+    // deleteAllSpheres();
 }
 
-void TangentBug::leaveContour()
-{
-    double distance_from_contour_start = calculateDistance(current_pose_.position.x, current_pose_.position.y, contour_start_x_, contour_start_y_);
-
-    // Verifica se já estamos suficientemente longe do ponto de início do contorno e se o caminho está livre
-    int path_status = isPathClear(calculateHeadingToGoal(), obstacle_threshold_);
-    std::cout << "path_status: " << path_status << std::endl;
-    std::cout << "distance_from_contour_start: " << distance_from_contour_start << std::endl;
-    if (distance_from_contour_start > 1.0 && path_status == 1)
-    { // Caminho livre
-        ROS_INFO("Saindo do contorno para o objetivo, caminho livre.");
-
-        // Suavizar a transição publicando algumas mensagens de parada
-        stopRobot();
-
-        // Mudar para o estado de seguir o objetivo diretamente
-        current_state_ = MOVE_TO_GOAL;
-    }
-    else if (path_status == -1)
-    { // Ângulo fora do campo de visão do LIDAR
-        ROS_WARN("Tentativa de sair do contorno, mas o ângulo ainda está fora do campo de visão do LIDAR, girando no próprio eixo...");
-        rotateInPlace();
-    }
-    else
-    {
-        ROS_WARN("Tentativa de sair do contorno, mas o caminho ainda não está livre ou o robô não se afastou o suficiente.");
-
-        // Manter a distância de segurança do obstáculo durante a tentativa de sair do contorno
-        rotateInPlace(rotation_speed_, 0.5);
-    }
-
-    // Log de depuração para acompanhamento
-    ROS_INFO("Distância do início do contorno: %f", distance_from_contour_start);
-}
-
-void TangentBug::stopRobot(int repeat_times)
+/**
+ * Para parar o robô, publicamos uma mensagem de velocidade linear e angular zeradas.
+ * Isso é útil para garantir que o robô pare imediatamente.
+ */
+void TangentBug::stopRobot()
 {
     geometry_msgs::Twist stop_msg;
     stop_msg.linear.x = 0.0;
@@ -474,17 +985,13 @@ void TangentBug::rotateInPlace(double angular_speed, double duration_seconds)
     stopRobot();
 }
 
+/**
+ * Calcula a distância entre dois pontos (x1, y1) e (x2, y2).
+ * Utiliza a fórmula da distância euclidiana.
+ */
 double TangentBug::calculateDistance(double x1, double y1, double x2, double y2)
 {
-    // Cálculo da distância euclidiana
-    double distance = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-
-    // Log mais detalhado para depuração
-    ROS_INFO("Posicao atual: [%f, %f], Objetivo: [%f, %f]", x1, y1, x2, y2);
-    ROS_INFO("Distância calculada: %f", distance);
-
-    // Retorna a distância calculada
-    return distance;
+    return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
 /**
@@ -493,10 +1000,11 @@ double TangentBug::calculateDistance(double x1, double y1, double x2, double y2)
 double TangentBug::calculateHeadingToGoal()
 {
     // Verificar se já estamos no objetivo ou muito perto dele
-    if (fabs(goal_x_ - current_pose_.position.x) < 0.01 && fabs(goal_y_ - current_pose_.position.y) < 0.01)
+    double distance_to_goal = calculateDistance(current_pose_.position.x, current_pose_.position.y, goal_x_, goal_y_);
+    if (distance_to_goal < goal_tolerance_)
     {
         ROS_INFO("Já estamos no objetivo!");
-        return 0.0; // Retornar 0 ou algum valor apropriado
+        return 0.0;
     }
 
     // Calcular o ângulo para o objetivo usando atan2
@@ -526,10 +1034,6 @@ int TangentBug::isPathClear(double heading, double obstacle_threshold)
     const auto &ranges = current_scan_.ranges;
     double angle_min = current_scan_.angle_min;
     double angle_increment = current_scan_.angle_increment;
-
-    std::cout << "angle_min: " << angle_min << std::endl;
-    std::cout << "angle_increment: " << angle_increment << std::endl;
-    std::cout << "cone_angle: " << cone_angle << std::endl;
 
     // Compute relative heading
     double robot_yaw = tf::getYaw(current_pose_.orientation);
@@ -634,108 +1138,119 @@ void TangentBug::spawnGoalMarker(double x, double y)
     }
 }
 
+// void TangentBug::moveToPoint(double x, double y)
+// {
+//     ros::Rate rate(20.0); // controla frequência de publicação (20 Hz)
+
+//     while (ros::ok())
+//     {
+//         geometry_msgs::Twist cmd;
+
+//         const auto &pos = current_pose_.position;
+//         const double dx = x - pos.x;
+//         const double dy = y - pos.y;
+
+//         const double distance = std::hypot(dx, dy);
+//         const double angle_to_target = std::atan2(dy, dx);
+//         const double yaw = tf2::getYaw(current_pose_.orientation);
+
+//         // erro angular normalizado [-pi, pi]
+//         const double angle_error = std::atan2(std::sin(angle_to_target - yaw),
+//                                               std::cos(angle_to_target - yaw));
+
+//         // chegou?
+//         if (distance < goal_tolerance_)
+//         {
+//             stopRobot();  // função auxiliar para publicar Twist zero
+//             ROS_INFO_STREAM("Alvo (" << x << "," << y << ") alcançado.");
+//             break;
+//         }
+
+//         // ganhos
+//         const double k_ang = 1.5;
+//         const double k_lin = 0.7;
+
+//         // saturação angular
+//         double ang_cmd = k_ang * angle_error;
+//         if (ang_cmd > max_angular_speed_)
+//             ang_cmd = max_angular_speed_;
+//         if (ang_cmd < -max_angular_speed_)
+//             ang_cmd = -max_angular_speed_;
+//         cmd.angular.z = ang_cmd;
+
+//         // só avança se alinhado
+//         if (std::fabs(angle_error) < 0.2)
+//         {
+//             cmd.linear.x = std::min(k_lin * distance, max_linear_speed_);
+//         }
+//         else
+//         {
+//             cmd.linear.x = 0.0;
+//         }
+
+//         cmd_vel_pub_.publish(cmd);
+
+//         ROS_DEBUG("moveToPoint: dist=%.2f, ang_err=%.2f, cmd(v=%.2f,w=%.2f)",
+//                   distance, angle_error, cmd.linear.x, cmd.angular.z);
+
+//         ros::spinOnce();
+//         rate.sleep();
+//     }
+// }
+
 void TangentBug::moveToPoint(double x, double y)
 {
     geometry_msgs::Twist cmd;
-    geometry_msgs::Point p = current_pose_.position;
 
-    // Vector to target
-    double dx = x - p.x;
-    double dy = y - p.y;
+    const auto &pos = current_pose_.position;
+    const double dx = x - pos.x;
+    const double dy = y - pos.y;
 
-    // Compute distance and direction
-    double distance = std::hypot(dx, dy);
-    double angle_to_target = atan2(dy, dx);
-    double yaw = tf::getYaw(current_pose_.orientation);
+    const double distance = std::hypot(dx, dy);
+    const double angle_to_target = std::atan2(dy, dx);
+    const double yaw = tf2::getYaw(current_pose_.orientation);
 
-    // Angular error, normalized
-    double angle_error = atan2(sin(angle_to_target - yaw), cos(angle_to_target - yaw));
+    // erro angular normalizado para [-pi, pi]
+    const double angle_error = std::atan2(std::sin(angle_to_target - yaw),
+                                          std::cos(angle_to_target - yaw));
 
-    // Stop robot if close enough
+    // chegou?
     if (distance < goal_tolerance_)
     {
-        ROS_INFO("Target reached: distance=%.2f, angle_error=%.2f", distance, angle_error);
         stopRobot();
         return;
     }
 
-    // Rotate toward target
-    cmd.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, angle_error * 1.5));
+    // ganhos simples (parametrizáveis)
+    const double k_ang = 1.5;
+    const double k_lin = 0.7;
 
-    // Move forward if facing roughly the right direction
+    // saturações
+    double ang_cmd = k_ang * angle_error;
+    if (ang_cmd > max_angular_speed_)
+        ang_cmd = max_angular_speed_;
+    if (ang_cmd < -max_angular_speed_)
+        ang_cmd = -max_angular_speed_;
+    cmd.angular.z = ang_cmd;
+
+    // só avança se estiver razoavelmente alinhado
     if (std::abs(angle_error) < 0.2)
     {
-        cmd.linear.x = std::min(distance * 0.7, max_linear_speed_);
+        cmd.linear.x = std::min(k_lin * distance, max_linear_speed_);
+    }
+    else
+    {
+        cmd.linear.x = 0.0; // evita “varrer” em arco largo
     }
 
-    ROS_DEBUG("moveToPoint: dx=%.2f, dy=%.2f, distance=%.2f, angle_to_target=%.2f, yaw=%.2f, angle_error=%.2f",
-              dx, dy, distance, angle_to_target, yaw, angle_error);
+    std::cout << "moveToPoint: target=(" << x << "," << y << "), pos=(" << pos.x << "," << pos.y
+              << "), dist=" << distance << ", ang_err=" << angle_error
+              << ", cmd(v=" << cmd.linear.x << ", w=" << cmd.angular.z << ")" << std::endl;
 
     cmd_vel_pub_.publish(cmd);
 
-    while (ros::ok())
-    {
-        geometry_msgs::Point p = current_pose_.position;
-
-        // Vector to target
-        dx = x - p.x;
-        dy = y - p.y;
-
-        // Compute distance and direction
-        distance = std::hypot(dx, dy);
-        ros::spinOnce();
-        if (distance < goal_tolerance_)
-        {
-            ROS_INFO("Target reached: distance=%.2f, angle_error=%.2f", distance, angle_error);
-            stopRobot();
-            break;
-        }
-    }
-}
-
-void TangentBug::followObstacle()
-{
-    if (current_scan_.ranges.empty())
-    {
-        ROS_WARN("LIDAR data is empty.");
-        stopRobot();
-        return;
-    }
-
-    // Find min and max index of obstacle range
-    size_t min_index = 0;
-    size_t max_index = 0;
-    float min_distance = std::numeric_limits<float>::max();
-
-    for (size_t i = 0; i < current_scan_.ranges.size(); ++i)
-    {
-        float range = current_scan_.ranges[i];
-        if (std::isfinite(range) && range < min_distance)
-        {
-            min_distance = range;
-            min_index = i;
-        }
-    }
-
-    // Define max_index to create a segment (e.g., ±15 degrees from min_index)
-    int segment_width = 15 * M_PI / 180 / current_scan_.angle_increment;
-    min_index = std::max(0, static_cast<int>(min_index) - segment_width);
-    max_index = std::min(static_cast<int>(current_scan_.ranges.size() - 1), static_cast<int>(min_index) + 2 * segment_width);
-
-    // Calculate midpoint of the segment
-    int mid_index = (min_index + max_index) / 2;
-    float mid_angle = current_scan_.angle_min + mid_index * current_scan_.angle_increment;
-    float mid_distance = current_scan_.ranges[mid_index];
-
-    // Transform midpoint from polar to Cartesian coordinates relative to robot
-    double obstacle_x = current_pose_.position.x + mid_distance * cos(mid_angle + tf::getYaw(current_pose_.orientation));
-    double obstacle_y = current_pose_.position.y + mid_distance * sin(mid_angle + tf::getYaw(current_pose_.orientation));
-
-    // Move towards the midpoint of the detected obstacle segment
-    moveToPoint(obstacle_x, obstacle_y);
-
-    ROS_DEBUG("followObstacle: obstacle midpoint=(%.2f, %.2f), mid_distance=%.2f, mid_angle=%.2f",
-              obstacle_x, obstacle_y, mid_distance, mid_angle);
+    ROS_DEBUG("moveToPoint: dist=%.2f, ang_err=%.2f, cmd(v=%.2f,w=%.2f)",
+              distance, angle_error, cmd.linear.x, cmd.angular.z);
 }
 
 std::vector<int> TangentBug::detectObstacleBoundaries2D(const sensor_msgs::LaserScan &scan, double threshold)
@@ -780,54 +1295,530 @@ std::vector<int> TangentBug::detectObstacleBoundaries2D(const sensor_msgs::Laser
     return obstacle_boundaries;
 }
 
+// -----------------------------------------------------------------------------
+// Helper: infla um segmento deslocando cada ponto ao longo da normal do contorno
+// para o lado "de fora" (mais distante do sensor).
+static inline std::vector<geometry_msgs::Point>
+inflateSegmentObstaclePerspective(const std::vector<geometry_msgs::Point> &seg,
+                                  const geometry_msgs::Point &sensor_global,
+                                  double d)
+{
+    std::vector<geometry_msgs::Point> out;
+    out.reserve(seg.size());
+    auto rot90 = [](double x, double y)
+    { return std::pair<double, double>{-y, x}; };
+
+    if (seg.empty())
+        return out;
+
+    for (size_t i = 0; i < seg.size(); ++i)
+    {
+        const auto &p = seg[i];
+
+        // Tangente por diferenças centrais; extremos usam vizinho único
+        double tx, ty;
+        if (i == 0)
+        {
+            tx = seg[1].x - p.x;
+            ty = seg[1].y - p.y;
+        }
+        else if (i + 1 == seg.size())
+        {
+            tx = p.x - seg[i - 1].x;
+            ty = p.y - seg[i - 1].y;
+        }
+        else
+        {
+            tx = seg[i + 1].x - seg[i - 1].x;
+            ty = seg[i + 1].y - seg[i - 1].y;
+        }
+
+        double nrm = std::hypot(tx, ty);
+        if (nrm < 1e-8)
+        {
+            tx = 1.0;
+            ty = 0.0;
+            nrm = 1.0;
+        }
+        tx /= nrm;
+        ty /= nrm;
+
+        auto n = rot90(tx, ty);
+        double nx = n.first;
+        double ny = n.second;
+
+        // Escolhe o lado "de fora": o que se afasta do sensor
+        const double vx = p.x - sensor_global.x;
+        const double vy = p.y - sensor_global.y;
+        if (nx * vx + ny * vy > 0.0)
+        {
+            nx = -nx;
+            ny = -ny;
+        }
+
+        const double max_d = std::max(0.0, std::hypot(vx, vy) - 1e-3);
+        const double d_use = std::min(d, max_d);
+        geometry_msgs::Point q;
+        q.x = p.x + d_use * nx;
+        q.y = p.y + d_use * ny;
+        q.z = 0.0;
+        out.push_back(q);
+    }
+    return out;
+}
+
+/**
+ * Extrai segmentos de obstáculos 2D a partir de dados de varredura LIDAR.
+ * Cada segmento é uma sequência de pontos que representam um obstáculo detectado.
+ *
+ * @param scan Dados da varredura LIDAR.
+ * @param threshold Distância mínima entre pontos para considerar como parte do mesmo segmento.
+ * @return Vetor de segmentos, onde cada segmento é um vetor de pontos (geometry_msgs::Point).
+ */
 std::vector<std::vector<geometry_msgs::Point>> TangentBug::extractObstacleSegments2D(
     const sensor_msgs::LaserScan &scan, double threshold)
 {
-    std::cout << "extractObstacleSegments2D" << std::endl;
     std::vector<std::vector<geometry_msgs::Point>> segments;
     std::vector<geometry_msgs::Point> current_segment;
+    std::vector<geometry_msgs::Point> current_segment_raw;
+    current_segment_raw.reserve(64);
 
     if (scan.ranges.empty())
     {
-        ROS_WARN("extractObstacleSegments2D: Empty scan.");
+        ROS_ERROR("extractObstacleSegments2D: Empty scan.");
         return segments;
     }
 
-    double angle = scan.angle_min;
-    for (size_t i = 0; i < scan.ranges.size(); ++i, angle += scan.angle_increment)
+    std::string laser_frame_id = scan.header.frame_id; // "sick_laser_link"
+    std::string global_frame_id = "odom";              // Ou "map"
+
+    geometry_msgs::TransformStamped transform_laser_to_global;
+
+    try
     {
-        float range = scan.ranges[i];
-        if (!std::isfinite(range))
-            continue;
+        // Primeiro: verifique se o TF está disponível até um timeout (equivale ao waitForTransform do tf1)
+        const ros::Duration timeout(0.5); // meio segundo
+        const bool ok = tf_buffer_.canTransform(
+            /*target*/ global_frame_id,
+            /*source*/ laser_frame_id,
+            /*time*/ scan.header.stamp,
+            /*timeout*/ timeout);
 
-        geometry_msgs::Point pt;
-        pt.x = range * std::cos(angle);
-        pt.y = range * std::sin(angle);
-        pt.z = 0.0;
-
-        if (!current_segment.empty())
+        if (!ok)
         {
-            const geometry_msgs::Point &last = current_segment.back();
-            double dist = std::hypot(pt.x - last.x, pt.y - last.y);
+            ROS_ERROR("TF2 unavailable from %s to %s at time %.3f (timeout %.2fs).",
+                      laser_frame_id.c_str(), global_frame_id.c_str(),
+                      scan.header.stamp.toSec(), timeout.toSec());
+            return segments;
+        }
 
-            if (dist >= threshold)
+        // Depois: obtenha a transformação (opcional: um timeout pequeno aqui também)
+        transform_laser_to_global = tf_buffer_.lookupTransform(
+            /*target*/ global_frame_id,
+            /*source*/ laser_frame_id,
+            /*time*/ scan.header.stamp,
+            /*timeout*/ ros::Duration(0.05));
+    }
+    catch (const tf2::TransformException &ex)
+    {
+        ROS_ERROR("TF2 error getting transform from %s to %s at %.3f: %s",
+                  laser_frame_id.c_str(), global_frame_id.c_str(),
+                  scan.header.stamp.toSec(), ex.what());
+        throw std::runtime_error("TF2 error");
+        // return segments; // lide com o erro conforme sua lógica
+    }
+
+    geometry_msgs::PointStamped origin_laser, origin_global;
+    origin_laser.header = scan.header;
+    origin_laser.point.x = origin_laser.point.y = origin_laser.point.z = 0.0;
+    try
+    {
+        tf2::doTransform(origin_laser, origin_global, transform_laser_to_global);
+    }
+    catch (const tf2::TransformException &ex)
+    {
+        ROS_ERROR("TF2 doTransform origin failed: %s", ex.what());
+        return segments;
+    }
+
+    // 2) Varre o scan, projeta cada ponto para o frame global e segmenta por distância
+    //    (otimizado com avanço incremental de cos/sin para evitar trig no loop)
+    double angle = scan.angle_min;
+    double c_th = std::cos(angle);
+    double s_th = std::sin(angle);
+    const double c_inc = std::cos(scan.angle_increment);
+    const double s_inc = std::sin(scan.angle_increment);
+    const double rmin = scan.range_min;
+    const double rmax = scan.range_max;
+    double prev_r = std::numeric_limits<double>::quiet_NaN();
+    bool have_prev = false;
+
+    // Util para fechar segmento atual
+    auto close_and_inflate = [&]()
+    {
+        if (!current_segment_raw.empty())
+        {
+            const double inflate_m = safety_margin_; // ajuste conforme seus membros/params
+            auto inflated = inflateSegmentObstaclePerspective(current_segment_raw,
+                                                              origin_global.point,
+                                                              inflate_m);
+            if (!inflated.empty())
+                segments.push_back(std::move(inflated));
+            current_segment_raw.clear();
+            current_segment_raw.reserve(64);
+        }
+    };
+
+    bool have_last = false;
+    geometry_msgs::Point last_raw;
+
+    for (size_t i = 0; i < scan.ranges.size(); ++i)
+    {
+        const float r = scan.ranges[i];
+
+        // Avanço trig para próximo passo já no final; aqui usamos c_th/s_th atuais
+        const auto advance_angle = [&]()
+        {
+            const double c_next = c_inc * c_th - s_inc * s_th;
+            const double s_next = s_inc * c_th + c_inc * s_th;
+            c_th = c_next;
+            s_th = s_next;
+        };
+
+        if (!std::isfinite(r) || r < rmin || r > rmax)
+        {
+            close_and_inflate();
+            have_last = false;
+            advance_angle();
+            continue;
+        }
+
+        // Ponto CRU em laser
+        geometry_msgs::PointStamped p_laser;
+        p_laser.header = scan.header;
+        p_laser.point.x = static_cast<double>(r) * c_th;
+        p_laser.point.y = static_cast<double>(r) * s_th;
+        p_laser.point.z = 0.0;
+
+        // Transforma para GLOBAL (ponto CRU)
+        geometry_msgs::PointStamped p_global_st;
+        try
+        {
+            tf2::doTransform(p_laser, p_global_st, transform_laser_to_global);
+        }
+        catch (const tf2::TransformException &ex)
+        {
+            ROS_WARN_THROTTLE(1.0, "TF2 doTransform beam failed: %s", ex.what());
+            close_and_inflate();
+            have_last = false;
+            advance_angle();
+            continue;
+        }
+
+        const geometry_msgs::Point &pt = p_global_st.point;
+
+        // Decide quebra por distância entre pontos CRUS em global
+        if (have_last)
+        {
+            const double dx = pt.x - last_raw.x;
+            const double dy = pt.y - last_raw.y;
+            const double dist = std::hypot(dx, dy);
+            if (!std::isfinite(dist) || dist >= threshold)
             {
-                segments.push_back(current_segment);
-                current_segment.clear();
+                close_and_inflate();
+                have_last = false; // o atual iniciará novo segmento abaixo
             }
         }
 
-        current_segment.push_back(pt);
-    }
+        // Acumula ponto CRU no segmento atual
+        current_segment_raw.push_back(pt);
+        last_raw = pt;
+        have_last = true;
 
-    // Add the final segment
-    if (!current_segment.empty())
-    {
-        segments.push_back(current_segment);
+        // Próximo feixe
+        advance_angle();
     }
+    close_and_inflate();
 
     return segments;
 }
+
+// std::vector<std::vector<geometry_msgs::Point>> TangentBug::extractObstacleSegments2D(
+//     const sensor_msgs::LaserScan &scan, double threshold)
+// {
+//     std::vector<std::vector<geometry_msgs::Point>> segments;
+//     std::vector<geometry_msgs::Point> current_segment;
+
+//     // Parâmetros/checagens básicas
+//     if (scan.ranges.empty())
+//     {
+//         ROS_ERROR("extractObstacleSegments2D: Empty scan.");
+//         return segments;
+//     }
+//     if (!(scan.angle_increment > 0.0))
+//     {
+//         ROS_ERROR("extractObstacleSegments2D: Invalid angle_increment (%.6f).", scan.angle_increment);
+//         return segments;
+//     }
+//     if (!(scan.range_max > scan.range_min))
+//     {
+//         ROS_ERROR("extractObstacleSegments2D: Invalid range limits [%.3f, %.3f].", scan.range_min, scan.range_max);
+//         return segments;
+//     }
+//     if (!(threshold > 0.0))
+//     {
+//         ROS_WARN("extractObstacleSegments2D: Non-positive threshold (%.3f). Clamping to 0.05 m.", threshold);
+//         threshold = 0.05;
+//     }
+
+//     const std::string laser_frame_id = scan.header.frame_id; // ex.: "sick_laser_link"
+//     const std::string global_frame_id = "odom";              // ajuste conforme sua árvore TF
+//     const double dtheta = scan.angle_increment;
+//     const bool per_beam_time = (scan.time_increment > 0.0);
+//     const ros::Time t0 = scan.header.stamp;
+
+//     // Utilitário para fechar e guardar um segmento atual (com filtro de tamanho mínimo)
+//     auto close_segment = [&]()
+//     {
+//         const size_t kMinPoints = 2; // evite ruído de 1 ponto
+//         if (!current_segment.empty())
+//         {
+//             if (current_segment.size() >= kMinPoints)
+//             {
+//                 segments.push_back(current_segment);
+//             }
+//             current_segment.clear();
+//         }
+//     };
+
+//     // Tente obter um transform único caso não haja time_increment (melhor que nada)
+//     geometry_msgs::TransformStamped tf_at_scan_time;
+//     bool have_single_tf = false;
+
+//     if (!per_beam_time)
+//     {
+//         try
+//         {
+//             // Melhor esforço no timestamp do scan; adiciona um pequeno timeout
+//             tf_at_scan_time = tf_buffer_.lookupTransform(
+//                 /*target_frame*/ global_frame_id, // ex: "base_link" ou "odom"
+//                 /*source_frame*/ laser_frame_id,  // ex: "sick_laser_link"
+//                 /*time*/ t0,                      // timestamp do LaserScan
+//                 /*timeout*/ ros::Duration(0.05));
+
+//             have_single_tf = true;
+//         }
+//         catch (const tf2::TransformException &ex)
+//         {
+//             ROS_WARN("TF2 at scan time unavailable (%s->%s @ %.3f): %s",
+//                      laser_frame_id.c_str(), global_frame_id.c_str(), t0.toSec(), ex.what());
+//         }
+//     }
+
+//     // Estado para a métrica de "salto" entre feixes
+//     double prev_range = std::numeric_limits<double>::quiet_NaN();
+//     bool have_prev = false;
+
+//     // Opcional: pequeno cache do último TF por-feixe (reduz lookups se timestamps repetem)
+//     geometry_msgs::TransformStamped last_tf_beam;
+//     ros::Time last_tf_time = ros::Time(0);
+//     const double tf_cache_dt = 0.005; // 5 ms
+
+//     for (size_t i = 0; i < scan.ranges.size(); ++i)
+//     {
+//         const double r = static_cast<double>(scan.ranges[i]);
+//         // invalidações: NaN/Inf e fora de faixa
+//         const bool valid = std::isfinite(r) && (r >= scan.range_min) && (r <= scan.range_max);
+//         if (!valid)
+//         {
+//             close_segment();
+//             have_prev = false;
+//             continue;
+//         }
+
+//         // Tempo do feixe (deskew quando possível)
+//         const ros::Time ti = per_beam_time ? (t0 + ros::Duration(i * scan.time_increment)) : t0;
+
+//         // Transform do laser -> global
+//         geometry_msgs::TransformStamped T_laser_to_global;
+//         try
+//         {
+//             if (per_beam_time)
+//             {
+//                 // Reusa TF se a diferença de tempo for muito pequena (economiza chamadas)
+//                 if (!last_tf_time.isZero() && std::abs((ti - last_tf_time).toSec()) < tf_cache_dt)
+//                 {
+//                     T_laser_to_global = last_tf_beam;
+//                 }
+//                 else
+//                 {
+//                     T_laser_to_global = tf_buffer_.lookupTransform(
+//                         global_frame_id, laser_frame_id, ti, ros::Duration(0.02));
+//                     last_tf_beam = T_laser_to_global;
+//                     last_tf_time = ti;
+//                 }
+//             }
+//             else if (have_single_tf)
+//             {
+//                 T_laser_to_global = tf_at_scan_time;
+//             }
+//             else
+//             {
+//                 // Fallback: último transform disponível (pior, porém funcional)
+//                 T_laser_to_global = tf_buffer_.lookupTransform(
+//                     global_frame_id, laser_frame_id, ros::Time(0), ros::Duration(0.02));
+//             }
+//         }
+//         catch (const tf2::TransformException &ex)
+//         {
+//             ROS_WARN_THROTTLE(1.0, "TF2 lookup failed (%s->%s @ %.3f): %s",
+//                               laser_frame_id.c_str(), global_frame_id.c_str(), ti.toSec(), ex.what());
+//             close_segment();
+//             have_prev = false;
+//             continue;
+//         }
+
+//         // Ângulo do feixe
+//         const double angle = scan.angle_min + static_cast<double>(i) * dtheta;
+
+//         // Verificação de "quebra" entre feixes adjacentes (Lei dos Cossenos)
+//         if (have_prev)
+//         {
+//             const double d_edge = std::sqrt(
+//                 prev_range * prev_range + r * r - 2.0 * prev_range * r * std::cos(dtheta));
+//             if (!std::isfinite(d_edge) || d_edge > threshold)
+//             {
+//                 close_segment();
+//             }
+//         }
+
+//         // Ponto no frame do laser
+//         geometry_msgs::PointStamped pt_laser, pt_global;
+//         pt_laser.header.frame_id = laser_frame_id;
+//         pt_laser.header.stamp = ti;
+//         pt_laser.point.x = r * std::cos(angle);
+//         pt_laser.point.y = r * std::sin(angle);
+//         pt_laser.point.z = 0.0;
+
+//         try
+//         {
+//             tf2::doTransform(pt_laser, pt_global, T_laser_to_global);
+//         }
+//         catch (const tf2::TransformException &ex)
+//         {
+//             ROS_WARN_THROTTLE(1.0, "TF2 doTransform failed: %s", ex.what());
+//             close_segment();
+//             have_prev = false;
+//             continue;
+//         }
+
+//         current_segment.push_back(pt_global.point);
+
+//         // Atualiza estado
+//         prev_range = r;
+//         have_prev = true;
+//     }
+
+//     // Último segmento
+//     close_segment();
+
+//     return segments;
+// }
+// std::vector<std::vector<geometry_msgs::Point>>
+// TangentBug::extractObstacleSegments2D(const sensor_msgs::LaserScan& scan, double threshold)
+// {
+//     std::vector<std::vector<geometry_msgs::Point>> segments;
+//     std::vector<geometry_msgs::Point> current_segment;
+
+//     // Checagens básicas
+//     if (scan.ranges.empty()) {
+//         ROS_ERROR("extractObstacleSegments2D: Empty scan.");
+//         return segments;
+//     }
+//     if (!(scan.angle_increment > 0.0)) {
+//         ROS_ERROR("extractObstacleSegments2D: Invalid angle_increment (%.6f).", scan.angle_increment);
+//         return segments;
+//     }
+//     if (!(scan.range_max > scan.range_min)) {
+//         ROS_ERROR("extractObstacleSegments2D: Invalid range limits [%.3f, %.3f].", scan.range_min, scan.range_max);
+//         return segments;
+//     }
+//     if (!(threshold > 0.0)) {
+//         ROS_WARN("extractObstacleSegments2D: Non-positive threshold (%.3f). Clamping to 0.05 m.", threshold);
+//         threshold = 0.05;
+//     }
+
+//     // Parâmetros internos simples (ajuste se necessário)
+//     const size_t  kMinPoints          = 3;     // descarta segmentos muito curtos
+//     const size_t  kMaxInvalidGap      = 1;     // até 1 leitura inválida não quebra
+//     const bool    kIgnoreAtMaxRange   = true;  // ignora pontos perto do range_max
+//     const double  kRelJumpFrac        = 0.30;  // quebra tb por salto relativo (~30%)
+
+//     const double dtheta = scan.angle_increment;
+//     const double rmin   = scan.range_min;
+//     const double rmax   = scan.range_max;
+//     const double near_max_eps = 0.98 * rmax;   // “perto do máximo” (simuladores adoram isso)
+
+//     auto close_segment = [&](size_t /*end_idx*/) {
+//         if (!current_segment.empty()) {
+//             if (current_segment.size() >= kMinPoints) {
+//                 segments.push_back(current_segment);
+//             }
+//             current_segment.clear();
+//         }
+//     };
+
+//     auto push_point = [&](double r, double ang) {
+//         geometry_msgs::Point p;
+//         p.x = r * std::cos(ang);
+//         p.y = r * std::sin(ang);
+//         p.z = 0.0;
+//         current_segment.emplace_back(std::move(p));
+//     };
+
+//     double prev_r   = std::numeric_limits<double>::quiet_NaN();
+//     bool   have_prev = false;
+//     size_t invalid_streak = 0;
+
+//     for (size_t i = 0; i < scan.ranges.size(); ++i) {
+//         const double r = static_cast<double>(scan.ranges[i]);
+//         const bool valid = std::isfinite(r) && (r >= rmin) && (r <= rmax);
+//         const double ang = scan.angle_min + static_cast<double>(i) * dtheta;
+
+//         if (!valid || (kIgnoreAtMaxRange && r >= near_max_eps)) {
+//             // permite um “buraco” curto antes de quebrar
+//             invalid_streak++;
+//             if (invalid_streak > kMaxInvalidGap) {
+//                 if (!current_segment.empty()) close_segment(i ? i - 1 : 0);
+//                 have_prev = false;
+//                 prev_r = std::numeric_limits<double>::quiet_NaN();
+//             }
+//             continue;
+//         }
+
+//         // reset do buraco
+//         invalid_streak = 0;
+
+//         // Quebra por salto entre feixes adjacentes
+//         if (have_prev) {
+//             const double d_edge = std::sqrt(prev_r*prev_r + r*r - 2.0*prev_r*r*std::cos(dtheta));
+//             const double rel_jump = std::abs(r - prev_r) / std::max(1e-6, std::min(r, prev_r));
+//             if (!std::isfinite(d_edge) || d_edge > threshold || rel_jump > kRelJumpFrac) {
+//                 close_segment(i ? i - 1 : 0);
+//             }
+//         }
+
+//         // Empilha ponto (no frame do laser)
+//         push_point(r, ang);
+//         prev_r = r;
+//         have_prev = true;
+//     }
+
+//     // Fecha último segmento, se houver
+//     if (!current_segment.empty()) close_segment(scan.ranges.size() - 1);
+
+//     return segments;
+// }
 
 /**
  * @brief Finds the closest endpoint (first or last) of a given segment to a target point.
@@ -960,17 +1951,54 @@ std::vector<geometry_msgs::Point> TangentBug::offsetSegmentTowardRobot(
     return offset_segment;
 }
 
+// std::vector<geometry_msgs::Point> TangentBug::offsetSegmentTowardRobotPerspective(
+//     const std::vector<geometry_msgs::Point> &segment,
+//     const geometry_msgs::Point &robot,
+//     double offset_distance_cm)
+// {
+//     std::vector<geometry_msgs::Point> offset_segment;
+
+//     if (segment.empty())
+//         return offset_segment;
+
+//     double offset_m = offset_distance_cm / 100.0;
+
+//     for (const auto &pt : segment)
+//     {
+//         double dx = robot.x - pt.x;
+//         double dy = robot.y - pt.y;
+//         double norm = std::hypot(dx, dy);
+
+//         geometry_msgs::Point shifted = pt;
+
+//         if (norm > 1e-6)
+//         {
+//             // Reverse direction if offset is negative (move away from robot)
+//             shifted.x += offset_m * (dx / norm);
+//             shifted.y += offset_m * (dy / norm);
+//         }
+
+//         offset_segment.push_back(shifted);
+//     }
+
+//     return offset_segment;
+// }
+
 std::vector<geometry_msgs::Point> TangentBug::offsetSegmentTowardRobotPerspective(
     const std::vector<geometry_msgs::Point> &segment,
     const geometry_msgs::Point &robot,
-    double offset_distance_cm)
+    double offset_distance_cm) // Novo parâmetro para a distância de expansão
 {
-    std::vector<geometry_msgs::Point> offset_segment;
+    std::vector<geometry_msgs::Point> offset_and_expanded_segment;
 
     if (segment.empty())
-        return offset_segment;
+        return offset_and_expanded_segment;
 
     double offset_m = offset_distance_cm / 100.0;
+    double expansion_m = offset_distance_cm / 100.0; // Converte a expansão para metros
+
+    // --- Passo 1: Aplicar o offset original ---
+    std::vector<geometry_msgs::Point> temp_offset_segment; // Segmento temporário após o offset
 
     for (const auto &pt : segment)
     {
@@ -980,15 +2008,154 @@ std::vector<geometry_msgs::Point> TangentBug::offsetSegmentTowardRobotPerspectiv
 
         geometry_msgs::Point shifted = pt;
 
-        if (norm > 1e-6)
+        if (norm > 1e-6) // Evita divisão por zero
         {
-            // Reverse direction if offset is negative (move away from robot)
+            // O sinal de offset_m determina se o ponto é movido para perto ou longe do robô
             shifted.x += offset_m * (dx / norm);
             shifted.y += offset_m * (dy / norm);
         }
 
-        offset_segment.push_back(shifted);
+        temp_offset_segment.push_back(shifted);
     }
 
-    return offset_segment;
+    // Se após o offset o segmento ficou vazio (não deveria ocorrer se não estava vazio antes)
+    if (temp_offset_segment.empty())
+    {
+        return offset_and_expanded_segment;
+    }
+
+    // --- Passo 2: Expandir o segmento deslocado ---
+
+    // Se o segmento tem apenas um ponto após o offset, não podemos definir uma direção para expansão.
+    // Retornamos o segmento com o offset aplicado.
+    if (temp_offset_segment.size() == 1)
+    {
+        return temp_offset_segment;
+    }
+
+    geometry_msgs::Point first_offset_point = temp_offset_segment.front();
+    geometry_msgs::Point last_offset_point = temp_offset_segment.back();
+
+    // Calcular o vetor direcional do segmento deslocado
+    double segment_dx = last_offset_point.x - first_offset_point.x;
+    double segment_dy = last_offset_point.y - first_offset_point.y;
+    double segment_norm = std::hypot(segment_dx, segment_dy);
+
+    if (segment_norm < 1e-6)
+    {                               // Segmento muito curto ou pontos sobrepostos após o offset
+        return temp_offset_segment; // Não podemos definir uma direção clara para expansão
+    }
+
+    // Vetor unitário na direção do segmento
+    double unit_dx = segment_dx / segment_norm;
+    double unit_dy = segment_dy / segment_norm;
+
+    // Calcular o novo ponto no início (projetando para trás)
+    geometry_msgs::Point new_first_point;
+    new_first_point.x = first_offset_point.x - (unit_dx * expansion_m);
+    new_first_point.y = first_offset_point.y - (unit_dy * expansion_m);
+    new_first_point.z = first_offset_point.z; // Mantém o Z
+
+    // Calcular o novo ponto no final (projetando para frente)
+    geometry_msgs::Point new_last_point;
+    new_last_point.x = last_offset_point.x + (unit_dx * expansion_m);
+    new_last_point.y = last_offset_point.y + (unit_dy * expansion_m);
+    new_last_point.z = last_offset_point.z; // Mantém o Z
+
+    // Adicionar o novo primeiro ponto
+    offset_and_expanded_segment.push_back(new_first_point);
+
+    // Adicionar todos os pontos do segmento deslocado (original)
+    for (const auto &pt : temp_offset_segment)
+    {
+        offset_and_expanded_segment.push_back(pt);
+    }
+
+    // Adicionar o novo último ponto
+    offset_and_expanded_segment.push_back(new_last_point);
+
+    return offset_and_expanded_segment;
+}
+
+geometry_msgs::Twist TangentBug::calculateTwistToPointAndAlign(const geometry_msgs::Point &target_point)
+{
+    geometry_msgs::Twist cmd_vel; // Comando de velocidade a ser construído e retornado
+
+    // 1. Verificação e Definição do Ponto Alvo Interno
+    // Esta lógica verifica se o 'target_point' fornecido é diferente do que a função está rastreando.
+    // Se for um novo ponto, ou se a função acabou de ser reiniciada (NaN), ela reinicia o processo.
+    // Usamos 'std::hypot' para comparar a distância, o que é mais robusto para doubles.
+    if (std::isnan(target_point_for_turn_then_move_.x) ||
+        std::hypot(target_point_for_turn_then_move_.x - target_point.x,
+                   target_point_for_turn_then_move_.y - target_point.y) > 0.001) // Tolerância de 1mm para mudança de ponto
+    {
+        target_point_for_turn_then_move_ = target_point;   // Armazena o novo ponto alvo
+        current_turn_then_move_state_ = ALIGNING_TO_POINT; // Reinicia para o estado de alinhamento
+        ROS_INFO("New target point for turn-then-move: (%.2f, %.2f). Starting ALIGNING_TO_POINT.",
+                 target_point.x, target_point.y);
+    }
+
+    // Posição e Orientação atuais do robô
+    const auto &robot_position = current_pose_.position;
+    double robot_yaw = tf::getYaw(current_pose_.orientation);
+
+    // Vetor do robô para o alvo
+    double dx = target_point.x - robot_position.x;
+    double dy = target_point.y - robot_position.y;
+    double distance_to_target = std::hypot(dx, dy);
+    double angle_to_target = std::atan2(dy, dx);
+    double angle_error = normalizeAngle(angle_to_target - robot_yaw); // Erro angular normalizado para [-PI, PI]
+
+    // 2. Lógica da Máquina de Estados Interna (ALIGNING_TO_POINT ou MOVING_TO_POINT)
+    switch (current_turn_then_move_state_)
+    {
+    case ALIGNING_TO_POINT:
+        ROS_DEBUG("TurnThenMoveState: ALIGNING_TO_POINT. Current Angle Error: %.2f rad (%.1f deg)",
+                  angle_error, angle_error * 180.0 / M_PI);
+
+        cmd_vel.linear.x = 0.0; // O robô não se move linearmente enquanto gira
+
+        // Controle Proporcional para a velocidade angular (gira para alinhar)
+        cmd_vel.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, angle_error * 1.5));
+
+        // Se o robô estiver bem alinhado (erro angular dentro da tolerância), transiciona
+        if (std::abs(angle_error) < alignment_tolerance_rad_)
+        {
+            ROS_INFO("Aligned to target point (%.2f, %.2f). Transitioning to MOVING_TO_POINT.",
+                     target_point.x, target_point.y);
+            current_turn_then_move_state_ = MOVING_TO_POINT;
+            // Opcional: define a velocidade angular para zero imediatamente para evitar overshooting.
+            cmd_vel.angular.z = 0.0;
+        }
+        break;
+
+    case MOVING_TO_POINT:
+        ROS_DEBUG("TurnThenMoveState: MOVING_TO_POINT. Distance to target: %.2f m", distance_to_target);
+
+        // Verifica se o ponto alvo já foi alcançado
+        if (distance_to_target < goal_tolerance_)
+        {
+            ROS_INFO("Target point (%.2f, %.2f) reached. Stopping.", target_point.x, target_point.y);
+            // Reinicia o alvo interno para NaN. Isso força um reinício (ALIGNING_TO_POINT)
+            // na próxima vez que essa função for chamada com *qualquer* ponto.
+            target_point_for_turn_then_move_.x = std::numeric_limits<double>::quiet_NaN();
+            return geometry_msgs::Twist(); // Retorna comando zero para parar o robô
+        }
+
+        // Move para frente com velocidade proporcional à distância, limitada pela velocidade máxima.
+        cmd_vel.linear.x = std::min(max_linear_speed_, distance_to_target * 0.7);
+
+        // Pequeno ajuste angular para manter o alinhamento enquanto avança.
+        // Se o robô desviar um pouco, ele faz uma correção suave.
+        if (std::abs(angle_error) > alignment_tolerance_rad_ / 2.0)
+        {
+            cmd_vel.angular.z = std::max(-max_angular_speed_, std::min(max_angular_speed_, angle_error * 0.5));
+        }
+        else
+        {
+            cmd_vel.angular.z = 0.0; // Se bem alinhado, não há rotação
+        }
+        break;
+    }
+    return cmd_vel; // Retorna o comando de velocidade calculado para o estágio atual
 }

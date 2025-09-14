@@ -5,6 +5,11 @@
 #include <gazebo_msgs/DeleteModel.h>
 #include <gazebo_msgs/GetWorldProperties.h>
 #include <geometry_msgs/Pose.h>
+#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <gazebo_msgs/GetWorldProperties.h>
+#include <gazebo_msgs/DeleteModel.h>
 #include <string>
 #include <deque>
 #include <sstream>
@@ -14,12 +19,18 @@ namespace tangentbug_utils
 {
 
     static std::deque<std::string> sphere_history;
+    static std::map<std::string, std::string> sphere_colors;  // Maps sphere name -> color
+    static std::deque<std::string> segment_history;           // Keeps insertion order
+    static std::map<std::string, std::string> segment_colors; // Maps segment name -> color
 
     // Convert #RRGGBB hex string to "R G B 1" format (0-1 scale)
     std::string hexToRGBA(const std::string &hex)
     {
         if (hex.size() != 7 || hex[0] != '#')
-            return "0 0 1 1"; // default blue
+        {
+            std::cerr << "Invalid hex color format: " << hex << std::endl;
+            return "1 1 0 1"; // default blue
+        }
 
         int r = std::stoi(hex.substr(1, 2), nullptr, 16);
         int g = std::stoi(hex.substr(3, 2), nullptr, 16);
@@ -40,27 +51,51 @@ namespace tangentbug_utils
         spawn_client.waitForExistence();
         delete_client.waitForExistence();
 
-        // Remove oldest if at limit
-        if (sphere_history.size() >= static_cast<size_t>(max_spheres))
-        {
-            std::string oldest = sphere_history.front();
-            sphere_history.pop_front();
+        // Count spheres of this color
+        int color_count = 0;
+        for (const auto &name : sphere_history)
+            if (sphere_colors[name] == color_hex)
+                color_count++;
 
-            gazebo_msgs::DeleteModel delete_srv;
-            delete_srv.request.model_name = oldest;
-            if (delete_client.call(delete_srv) && delete_srv.response.success)
+        // Remove oldest sphere with this color ONLY if the count for that color reached the limit
+        if (color_count >= max_spheres)
+        {
+            std::string sphere_to_delete;
+            for (const auto &name : sphere_history)
             {
-                ROS_INFO_STREAM("Deleted oldest sphere: " << oldest);
+                if (sphere_colors[name] == color_hex) // Oldest with same color
+                {
+                    sphere_to_delete = name;
+                    break;
+                }
             }
-            else
+
+            if (!sphere_to_delete.empty())
             {
-                ROS_WARN_STREAM("Failed to delete oldest sphere: " << oldest);
+                // Remove from history
+                sphere_history.erase(
+                    std::remove(sphere_history.begin(), sphere_history.end(), sphere_to_delete),
+                    sphere_history.end());
+
+                // Delete in Gazebo
+                gazebo_msgs::DeleteModel delete_srv;
+                delete_srv.request.model_name = sphere_to_delete;
+                if (delete_client.call(delete_srv) && delete_srv.response.success)
+                {
+                    ROS_INFO_STREAM("Deleted sphere of color " << color_hex << ": " << sphere_to_delete);
+                    sphere_colors.erase(sphere_to_delete);
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Failed to delete sphere: " << sphere_to_delete);
+                }
             }
         }
 
         // Generate a unique model name
         std::string model_name = "sphere_" + std::to_string(ros::Time::now().toNSec());
         sphere_history.push_back(model_name);
+        sphere_colors[model_name] = color_hex; // Track the color
 
         // Convert color
         std::string color_rgba = hexToRGBA(color_hex);
@@ -69,11 +104,11 @@ namespace tangentbug_utils
         std::ostringstream sdf;
         sdf << "<?xml version='1.0'?>"
             << "<sdf version='1.6'>"
-            << "  <model name='unit_sphere'>"
+            << "  <model name='" << model_name << "'>"
             << "    <static>true</static>"
             << "    <link name='link'>"
             << "      <visual name='visual'>"
-            << "        <geometry><box><size>0.05 0.05 0.05</size></box></geometry>"
+            << "        <geometry><box><size>0.05 0.05 2.5</size></box></geometry>"
             << "        <material><ambient>" << color_rgba << "</ambient></material>"
             << "      </visual>"
             << "    </link>"
@@ -95,6 +130,137 @@ namespace tangentbug_utils
         else
         {
             ROS_ERROR_STREAM("Failed to spawn sphere: " << srv.response.status_message);
+        }
+    }
+
+    void spawnLineSegment(
+        double x1, double y1, double z1,
+        double x2, double y2, double z2,
+        const std::string &color_hex,
+        int max_segments)
+    {
+        ros::NodeHandle nh;
+        ros::ServiceClient spawn_client = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_sdf_model");
+        ros::ServiceClient delete_client = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
+
+        spawn_client.waitForExistence();
+        delete_client.waitForExistence();
+
+        // Count segments of this color
+        int color_count = 0;
+        for (const auto &name : segment_history)
+            if (segment_colors[name] == color_hex)
+                color_count++;
+
+        // Remove oldest segment with this color ONLY if the count for that color reached the limit
+        if (color_count >= max_segments)
+        {
+            std::string segment_to_delete;
+            for (const auto &name : segment_history)
+            {
+                if (segment_colors[name] == color_hex) // Oldest with same color
+                {
+                    segment_to_delete = name;
+                    break;
+                }
+            }
+
+            if (!segment_to_delete.empty())
+            {
+                // Remove from history
+                segment_history.erase(
+                    std::remove(segment_history.begin(), segment_history.end(), segment_to_delete),
+                    segment_history.end());
+
+                // Delete in Gazebo
+                gazebo_msgs::DeleteModel delete_srv;
+                delete_srv.request.model_name = segment_to_delete;
+                if (delete_client.call(delete_srv) && delete_srv.response.success)
+                {
+                    ROS_INFO_STREAM("Deleted segment of color " << color_hex << ": " << segment_to_delete);
+                    segment_colors.erase(segment_to_delete);
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Failed to delete segment: " << segment_to_delete);
+                }
+            }
+        }
+
+        // Unique name
+        std::string model_name = "segment_" + std::to_string(ros::Time::now().toNSec());
+        segment_history.push_back(model_name);
+        segment_colors[model_name] = color_hex; // Track the color
+
+        // Calculate length & orientation
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double dz = z2 - z1;
+        double length = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+        // Skip zero-length segments (prevents Ogre crash)
+        if (length < 0.01)
+            length = 0.01;
+
+        // Midpoint
+        double mx = (x1 + x2) / 2.0;
+        double my = (y1 + y2) / 2.0;
+        double mz = (z1 + z2) / 2.0;
+
+        // Direction -> quaternion
+        tf2::Vector3 dir = tf2::Vector3(dx, dy, dz);
+        dir.normalize();
+        tf2::Vector3 up(1, 0, 0); // default axis for box
+        tf2::Quaternion q;
+        if (dir != up)
+        {
+            tf2::Vector3 rot_axis = up.cross(dir);
+            rot_axis.normalize();
+            double angle = std::acos(up.dot(dir));
+            q.setRotation(rot_axis, angle);
+        }
+        else
+        {
+            q.setValue(0, 0, 0, 1);
+        }
+
+        // Convert color
+        std::string color_rgba = hexToRGBA(color_hex);
+
+        // SDF for the thin box (line segment)
+        std::ostringstream sdf;
+        sdf << "<?xml version='1.0'?>"
+            << "<sdf version='1.6'>"
+            << "  <model name='" << model_name << "'>"
+            << "    <static>true</static>"
+            << "    <link name='link'>"
+            << "      <visual name='visual'>"
+            << "        <geometry><box><size>" << length << " 0.02 2.5</size></box></geometry>"
+            << "        <material><ambient>" << color_rgba << "</ambient></material>"
+            << "      </visual>"
+            << "    </link>"
+            << "  </model>"
+            << "</sdf>";
+
+        gazebo_msgs::SpawnModel srv;
+        srv.request.model_name = model_name;
+        srv.request.model_xml = sdf.str();
+        srv.request.initial_pose.position.x = mx;
+        srv.request.initial_pose.position.y = my;
+        srv.request.initial_pose.position.z = mz;
+        srv.request.initial_pose.orientation.x = q.x();
+        srv.request.initial_pose.orientation.y = q.y();
+        srv.request.initial_pose.orientation.z = q.z();
+        srv.request.initial_pose.orientation.w = q.w();
+
+        if (spawn_client.call(srv) && srv.response.success)
+        {
+            ROS_INFO_STREAM("Spawned segment from (" << x1 << "," << y1 << "," << z1 << ") to ("
+                                                     << x2 << "," << y2 << "," << z2 << ") with color " << color_hex);
+        }
+        else
+        {
+            ROS_ERROR_STREAM("Failed to spawn segment: " << srv.response.status_message);
         }
     }
 
@@ -175,5 +341,77 @@ namespace tangentbug_utils
 
         simplified.push_back(segment.back());
         return simplified;
+    }
+
+    /**
+     * @brief Intersects two line segments defined by points p1, p2 and q1, q2.
+     *        Returns the intersection point if they intersect, otherwise returns
+     *        a default Point with intersects set to false.
+     */
+    IntersectionResult intersectSegments(
+        const geometry_msgs::Point &p1, const geometry_msgs::Point &p2,
+        const geometry_msgs::Point &q1, const geometry_msgs::Point &q2)
+    {
+        IntersectionResult result;
+
+        double s1_x = p2.x - p1.x;
+        double s1_y = p2.y - p1.y;
+        double s2_x = q2.x - q1.x;
+        double s2_y = q2.y - q1.y;
+
+        double denom = (-s2_x * s1_y + s1_x * s2_y);
+        if (fabs(denom) < 1e-6)
+            return result; // paralelo ou colinear
+
+        double s = (-s1_y * (p1.x - q1.x) + s1_x * (p1.y - q1.y)) / denom;
+        double t = (s2_x * (p1.y - q1.y) - s2_y * (p1.x - q1.x)) / denom;
+
+        if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+        {
+            result.point.x = p1.x + (t * s1_x);
+            result.point.y = p1.y + (t * s1_y);
+            result.point.z = 0.0; // opcional
+            result.intersects = true;
+        }
+
+        return result;
+    }
+
+    void clearAllSpheresAndSegments(std::string object_name)
+    {
+        ros::NodeHandle nh;
+        ros::ServiceClient world_client = nh.serviceClient<gazebo_msgs::GetWorldProperties>("/gazebo/get_world_properties");
+        ros::ServiceClient delete_client = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
+
+        world_client.waitForExistence();
+        delete_client.waitForExistence();
+
+        gazebo_msgs::GetWorldProperties world_srv;
+        if (!world_client.call(world_srv) || !world_srv.response.success)
+        {
+            ROS_ERROR("Failed to call /gazebo/get_world_properties");
+            return;
+        }
+
+        int deleted_count = 0;
+        for (const auto &name : world_srv.response.model_names)
+        {
+            if ((object_name == "sphere_OR_segment_" && name.find("sphere_") == 0 || name.find("segment_") == 0) || (name.find(object_name) == 0))
+            {
+                gazebo_msgs::DeleteModel delete_srv;
+                delete_srv.request.model_name = name;
+                if (delete_client.call(delete_srv) && delete_srv.response.success)
+                {
+                    ROS_INFO_STREAM("Deleted model: " << name);
+                    deleted_count++;
+                }
+                else
+                {
+                    ROS_WARN_STREAM("Failed to delete model: " << name);
+                }
+            }
+        }
+
+        ROS_INFO_STREAM("Deleted " << deleted_count << " spheres/segments from Gazebo.");
     }
 }
