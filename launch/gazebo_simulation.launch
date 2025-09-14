@@ -33,7 +33,7 @@
 
     <!-- Lança o Gazebo com o mundo especificado -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-        <arg name="world_name" value="$(find tangent_bug_2dnav)/maps/map2/world.sdf"/>
+        <arg name="world_name" value="$(find tangent_bug_2dnav)/maps/map6/world.sdf"/>
         <arg name="paused" value="false"/>
         <arg name="use_sim_time" value="true"/>
         <arg name="gui" value="$(arg gui)"/>
@@ -75,13 +75,14 @@
     </node>
 
     <!-- Navegação com Move Base (opcional) -->
-    <rosparam file="$(find tangent_bug_2dnav)/config/move_base_params.yaml" command="load"/>
-    <rosparam file="$(find tangent_bug_2dnav)/config/costmap_common_params.yaml" command="load"/>
+    <rosparam file="$(find tangent_bug_2dnav)/config/move_base_params.yaml" command="load" ns="move_base"/>
+    <rosparam file="$(find tangent_bug_2dnav)/config/costmap_common_params.yaml" command="load" ns="move_base"/>
     <rosparam file="$(find tangent_bug_2dnav)/config/global_costmap_params.yaml" command="load" ns="move_base"/>
     <rosparam file="$(find tangent_bug_2dnav)/config/local_costmap_params.yaml" command="load" ns="move_base"/>
 
     <node name="move_base" pkg="move_base" type="move_base" output="screen"/>
 
+    <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_static_tf" args="0.25 0 0.35 0 0 0 base_link sick_laser_link"/>
 
     <!-- ============================================= -->
     <!-- MODELOS ADICIONAIS NO GAZEBO (OPCIONAL) -->

@@ -8,6 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   visualization_msgs
   roslib
+  tf
+  tf_conversions
 )
 
 ## Enable testing
