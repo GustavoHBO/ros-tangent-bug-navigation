@@ -24,5 +24,11 @@ namespace tangentbug_utils
         double angle_tolerance_deg = 5.0);
     IntersectionResult intersectSegments(const geometry_msgs::Point &p1, const geometry_msgs::Point &p2,
                                          const geometry_msgs::Point &q1, const geometry_msgs::Point &q2);
+
+    std::vector<std::vector<geometry_msgs::Point>> parallelSegmentsAtDistance(
+        const geometry_msgs::Point &p1,
+        const geometry_msgs::Point &p2,
+        double dist);
+
     void clearAllSpheresAndSegments(std::string object_name = "sphere_OR_segment_");
 }

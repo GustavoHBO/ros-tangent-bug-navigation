@@ -59,7 +59,7 @@ public:
     void navigate();
 
     // Computa o controle baseado no estado atual
-    void computeControl(const ros::TimerEvent &event);
+    void computeControl();
 
     // private:
 

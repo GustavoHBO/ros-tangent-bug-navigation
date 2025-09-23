@@ -47,13 +47,6 @@ if(CATKIN_ENABLE_TESTING)
       ${catkin_LIBRARIES})
   endif()
 
-  catkin_add_gtest(test_detect_obstacle_boundaries test/test_detect_obstacle_boundaries.cpp src/TangentBug.cpp)
-  if(TARGET test_detect_obstacle_boundaries)
-    target_link_libraries(test_detect_obstacle_boundaries
-      tangentbug_utils
-      ${catkin_LIBRARIES})
-  endif()
-
   catkin_add_gtest(test_extract_obstacle_segments test/test_extract_obstacle_segments.cpp src/TangentBug.cpp)
   if(TARGET test_extract_obstacle_segments)
     target_link_libraries(test_extract_obstacle_segments

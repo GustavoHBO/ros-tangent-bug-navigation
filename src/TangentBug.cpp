@@ -4,7 +4,7 @@
 
 TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh),
                                               current_state_(MOVE_TO_GOAL),
-                                              tf_buffer_(ros::Duration(10.0)), // cache de 10s
+                                              tf_buffer_(ros::Duration(1.0)), // cache de 10s
                                               tf_listener_(tf_buffer_)         // inicia listener
 {
 
@@ -68,7 +68,7 @@ TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh),
 
     // Inicializa o timer de controle para chamar computeControl periodicamente
     // É crucial para o comportamento não-bloqueante do nó.
-    control_timer_ = nh_.createTimer(ros::Duration(1.0 / 60.0), &TangentBug::computeControl, this); // 60 Hz
+    // control_timer_ = nh_.createTimer(ros::Duration(1.0 / 60.0), &TangentBug::computeControl, this); // 60 Hz
     ROS_INFO("TangentBug node initialized. Waiting for goal...");
     clearAllSpheresAndSegments();
     stopRobot(); // Garante que o robô comece parado
@@ -121,18 +121,19 @@ void TangentBug::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg)
 void TangentBug::navigate()
 {
     stopRobot();
-    // ros::Rate rate(100);
-    // while (ros::ok())
-    // {
-    //     std::cout << "TangentBug::navigate()" << std::endl;
-    //     followContour();
-    //     computeControl();
-    //     ros::spinOnce();
-    // }
+    ros::Rate rate(100);
+    while (ros::ok())
+    {
+        std::cout << "TangentBug::navigate()" << std::endl;
+        computeControl();
+        ros::spinOnce();
+    }
 }
 
-void TangentBug::computeControl(const ros::TimerEvent &event)
+void TangentBug::computeControl()
 {
+    std::cout << "------------------------------------------------------------------------" << std::endl;
+    std::cout << "TangentBug::computeControl()" << std::endl;
     if (std::isnan(goal_x_) || std::isnan(goal_y_))
     {
         stopRobot(); // Publica 0 para evitar movimento inesperado
@@ -228,13 +229,12 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
 
     for (const auto &segment : simplified_segments)
     {
-        std::cout << "Segmento simplificado: ";
+        std::cout << "Segmento simplificado: " << std::endl;
         for (const auto &point : segment)
         {
-            std::cout << "(" << point.x << ", " << point.y << ") ";
+            std::cout << "(" << point.x << ", " << point.y << ") " << std::endl;
             spawnSphereAt(point.x, point.y, 0.0, "#00FF00", 1); // Marca os pontos do segmento simplificado no Gazebo
         }
-        std::cout << std::endl;
     }
 
     std::cout << "Número de segmentos simplificados: " << simplified_segments.size() << std::endl;
@@ -250,8 +250,6 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
     std::cout << "Total de pontos nos segmentos globais: " << total_points_global_segments
               << ", Total de pontos nos segmentos simplificados: " << total_points_simplified_segments << std::endl;
 
-    const std::vector<geometry_msgs::Point> segment_robot_to_goal = {robot_position, point_goal_};
-
     // Procura o segmento de reta que intercepta o segmento do robô ao objetivo
     std::vector<geometry_msgs::Point> intersection_segment;
 
@@ -259,11 +257,15 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
     double min_dist_intersect = std::numeric_limits<double>::max();
     double current_min_dist_to_goal = std::numeric_limits<double>::max();
     geometry_msgs::Point closest_intersection;
-    geometry_msgs::Point closest_point_to_goal;
+    geometry_msgs::Point closest_point_to_goal = point_goal_;
     bool found_intersection = false;
 
     // spawnLineSegment(robot_position.x, robot_position.y, 0.0, goal_x_, goal_y_, 0.0, "#430073"); // Linha do robô ao objetivo
-
+    std::vector<std::vector<geometry_msgs::Point>> parallel_segments = parallelSegmentsAtDistance(robot_position, point_goal_, (robot_width_ + safety_margin_) / 2.0);
+    spawnLineSegment(parallel_segments[0][0].x, parallel_segments[0][0].y, 0.0,
+                     parallel_segments[0][1].x, parallel_segments[0][1].y, 0.0, "#000FFF", 2); // Linha paralela 1
+    spawnLineSegment(parallel_segments[1][0].x, parallel_segments[1][0].y, 0.0,
+                     parallel_segments[1][1].x, parallel_segments[1][1].y, 0.0, "#000FFF", 2); // Linha paralela 2
     for (const auto &segment : simplified_segments)
     {
         for (size_t i = 0; i + 1 < segment.size(); ++i)
@@ -275,16 +277,28 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
             //           << " até (" << segment_robot_to_goal[1].x << ", " << segment_robot_to_goal[1].y << ")" << std::endl;
 
             IntersectionResult intersection = intersectSegments(segment[i], segment[i + 1],
-                                                                segment_robot_to_goal[0], segment_robot_to_goal[1]);
+                                                                parallel_segments[0][0], parallel_segments[0][1]);
 
             geometry_msgs::Point inter = intersection.point;
             intersects = intersection.intersects;
+            if (!intersects)
+            {
+                intersection = intersectSegments(
+                    segment[i], segment[i + 1],
+                    parallel_segments[1][0], parallel_segments[1][1]);
+                inter = intersection.point;
+                intersects = intersection.intersects;
+            }
 
             // spawnLineSegment(segment[i].x, segment[i].y, 0.0, segment[i + 1].x, segment[i + 1].y, 0.0, "#787878", segment.size()); // Linha do segmento do obstáculo
 
-            double dist = calculateDistance(robot_position.x, robot_position.y, inter.x, inter.y);
+            double dist;
             if (intersects)
             {
+                std::cout << "Interseção encontrada no ponto: (" << inter.x << ", " << inter.y << ")" << std::endl;
+                dist = calculateDistance(robot_position.x, robot_position.y, inter.x, inter.y);
+                std::cout << "Distância do robô até a interseção: " << dist << std::endl;
+
                 intersection_segment = {segment[i], segment[i + 1]};
                 if (dist < min_dist_intersect)
                 {
@@ -292,13 +306,16 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
                     closest_intersection = inter;
                     found_intersection = true;
                 }
+                // if (dist < current_min_dist_to_goal)
+                // {
+                //     current_min_dist_to_goal = dist;
+                //     closest_point_to_goal = inter;
+                // }
             }
-            if (dist < current_min_dist_to_goal)
-            {
-                current_min_dist_to_goal = dist;
-                closest_point_to_goal = inter;
-            }
+
             dist = calculateDistance(segment[i].x, segment[i].y, goal_x_, goal_y_);
+            std::cout << "Ponto do segmento: (" << segment[i].x << ", " << segment[i].y << ")" << std::endl;
+            std::cout << "Distância do segmento até o objetivo: " << dist << std::endl;
             if (dist < current_min_dist_to_goal)
             {
                 current_min_dist_to_goal = dist;
@@ -307,6 +324,8 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
             if (i + 2 == segment.size())
             {
                 dist = calculateDistance(segment[i + 1].x, segment[i + 1].y, goal_x_, goal_y_);
+                std::cout << "Ponto do segmento: (" << segment[i + 1].x << ", " << segment[i + 1].y << ")" << std::endl;
+                std::cout << "Distância do segmento até o objetivo: " << dist << std::endl;
                 if (dist < current_min_dist_to_goal)
                 {
                     current_min_dist_to_goal = dist;
@@ -336,12 +355,21 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
     if (current_state_ == MOVE_TO_GOAL)
     {
         current_min_dist_to_goal = current_min_dist_to_goal == std::numeric_limits<double>::max() ? distance_to_goal : current_min_dist_to_goal;
-        if (current_min_dist_to_goal > distance_to_goal || found_intersection)
+        const float heuristic_to_goal_via_closest_obstacle_point = calculateDistance(robot_position.x, robot_position.y,
+                                                                           closest_point_to_goal.x, closest_point_to_goal.y) +
+                                                            calculateDistance(closest_point_to_goal.x, closest_point_to_goal.y,
+                                                                              goal_x_, goal_y_);
+        d_reach_ = distance_to_goal < d_reach_ ? distance_to_goal : d_reach_;
+        // if (current_min_dist_to_goal > distance_to_goal || found_intersection)
+        // if (found_intersection || current_min_dist_to_goal > d_reach_)
+        if (!(!found_intersection || heuristic_to_goal_via_closest_obstacle_point < distance_to_goal))
+        // if (found_intersection)
         {
             current_state_ = FOLLOW_CONTOUR;
             std::cout << "Vamos ter que seguir a borda" << std::endl;
             // d_reach_point_ = intersection_segment[0]; // Inicializa com o primeiro ponto do primeiro segmento
-            d_reach_point_ = simplified_segments[0][1]; // Inicializa com o primeiro ponto do primeiro segmento
+            // ultimo ponto do segmento
+            d_reach_point_ = simplified_segments[0][simplified_segments[0].size() - 1];
         }
         else
         {
@@ -353,7 +381,7 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
     else if (current_state_ == FOLLOW_CONTOUR)
     {
 
-        if (current_min_dist_to_goal < d_reach_)
+        if (current_min_dist_to_goal < d_reach_ && !found_intersection)
         {
             std::cout << "G2 não é vazio" << std::endl;
             d_reach_point_ = closest_point_to_goal;
@@ -362,7 +390,7 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
         else
         {
             std::cout << "Continuando a seguir o contorno" << std::endl;
-            d_reach_point_ = simplified_segments[0][1]; // Continua indo para o primeiro ponto do primeiro segmento
+            d_reach_point_ = simplified_segments.size() > 0 ? simplified_segments[0][simplified_segments[0].size() - 1] : point_goal_; // Continua indo para o primeiro ponto do primeiro segmento
             // d_reach_point_ = closest_point_to_goal;
         }
         d_reach_ = distance_to_goal < d_reach_ ? distance_to_goal : d_reach_;
@@ -385,6 +413,9 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
         }
     }
 
+    std::cout << "Indo para o estado: " << (current_state_ == MOVE_TO_GOAL ? "MOVE_TO_GOAL" : current_state_ == FOLLOW_CONTOUR ? "FOLLOW_CONTOUR"
+                                                                                                                               : "LEAVE_CONTOUR")
+              << std::endl;
     std::cout << "d_reach_: " << d_reach_ << std::endl;
     std::cout << "Distância ao objetivo: " << distance_to_goal << std::endl;
     std::cout << "Distância mínima atual ao objetivo: " << current_min_dist_to_goal << std::endl;
@@ -398,149 +429,6 @@ void TangentBug::computeControl(const ros::TimerEvent &event)
     // Espera 1 segundo
     ros::Duration(1.0).sleep();
     stopRobot(); // Garante que o robô pare antes de mudar de direção
-
-    return;
-
-    if (current_min_dist_to_goal < d_reach_)
-    {
-        ROS_DEBUG("Ponto mais próximo do objetivo encontrado: (%.2f, %.2f)", closest_point_to_goal.x, closest_point_to_goal.y);
-        std::cout << "Ponto mais próximo do objetivo encontrado com distância mínima: " << current_min_dist_to_goal << std::endl;
-        d_reach_ = current_min_dist_to_goal;    // Atualiza a distância de alcance
-        d_reach_point_ = closest_point_to_goal; // Atualiza o ponto do obstáculo mais próximo do objetivo
-    }
-    else
-    {
-        ROS_DEBUG("Nenhum ponto mais próximo do objetivo encontrado.");
-        std::cout << "Nenhum ponto mais próximo do objetivo encontrado." << std::endl;
-    }
-
-    std::string color_hex;
-    if (found_intersection)
-    {
-        color_hex = "#FF0000"; // Vermelho para interseção encontrada
-        // d_reach_ = min_dist_intersect;
-        // d_reach_point_ = closest_intersection; // Atualiza o ponto do obstáculo mais próximo do objetivo
-        std::cout << "Existe obstáculo entre o robô e o objetivo." << std::endl;
-        std::cout << "Ponto de interseção mais próximo do robô: (" << closest_intersection.x << ", " << closest_intersection.y << ")" << std::endl;
-        std::cout << "Interseção encontrada com distância mínima: " << min_dist_intersect << std::endl;
-        ROS_DEBUG("Interseção encontrada: (%.2f, %.2f)", closest_intersection.x, closest_intersection.y);
-    }
-    else
-    {
-        color_hex = "#00FF00"; // Verde para nenhuma interseção encontrada
-        // d_reach_ = distance_to_goal;
-        // d_reach_point_ = robot_position; // Se não houver interseção, usa a posição atual do robô
-        std::cout << "Nenhum obstáculo entre o robô e o objetivo." << std::endl;
-        std::cout << "Point do robô usado como ponto de alcance: (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
-        std::cout << "Nenhuma interseção encontrada entre o robô e o objetivo." << std::endl;
-        ROS_DEBUG("Nenhuma interseção encontrada entre o robô e o objetivo.");
-    }
-
-    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, color_hex);                                             // Atualiza o marcador do ponto de alcance no Gazebo
-    spawnLineSegment(robot_position.x, robot_position.y, 0.0, d_reach_point_.x, d_reach_point_.y, 0.0, color_hex); // Atualiza o marcador do segmento entre o robô e o ponto de alcance no Gazebo
-
-    if (min_dist_intersect < std::numeric_limits<double>::max())
-    {
-        found_intersection = true;
-        intersection_segment.push_back(closest_intersection);
-        intersection_segment.push_back(point_goal_);
-        ROS_DEBUG("Interseção encontrada: (%.2f, %.2f)", closest_intersection.x, closest_intersection.y);
-        std::cout << "Interseção encontrada com distância mínima: " << min_dist_intersect << std::endl;
-        d_reach_ = min_dist_intersect; // Atualiza a distância de alcance
-    }
-    else
-    {
-        ROS_DEBUG("Nenhuma interseção encontrada entre o robô e o objetivo.");
-        std::cout << "Nenhuma interseção encontrada entre o robô e o objetivo." << std::endl;
-        d_reach_ = distance_to_goal; // Se não houver interseção, usa a distância direta
-    }
-
-    // Encontra o ponto do segmento mais próximo do objetivo
-    geometry_msgs::Point closest_point_on_segment;
-    double min_distance_to_segment = std::numeric_limits<double>::max();
-    for (const auto &segment : simplified_segments)
-    {
-        for (size_t i = 0; i + 1 <= segment.size(); ++i)
-        {
-            geometry_msgs::Point point_on_segment = segment[i];
-            // spawn segment from point_on_segment to goal for visualization
-            spawnLineSegment(point_on_segment.x, point_on_segment.y, 0.0, point_goal_.x, point_goal_.y, 0.0, "#00FFFF"); // Linha do ponto do segmento ao objetivo
-            double dist = calculateDistance(point_on_segment.x, point_on_segment.y, point_goal_.x, point_goal_.y);
-            if (dist < min_distance_to_segment)
-            {
-                min_distance_to_segment = dist;
-                closest_point_on_segment = point_on_segment;
-            }
-        }
-    }
-
-    spawnSphereAt(closest_point_on_segment.x, closest_point_on_segment.y, 0.0, "#0000FF", 1); // Atualiza o marcador do ponto mais próximo do segmento no Gazebo
-
-    spawnLineSegment(robot_position.x, robot_position.y, 0.0, closest_point_on_segment.x, closest_point_on_segment.y, 0.0, "#0000FF"); // Atualiza o marcador do segmento entre o robô e o ponto mais próximo do segmento no Gazebo
-
-    // Atualiza a distância seguida
-    d_followed_ = min_distance_to_segment;
-
-    std::cout << "d_followed_: " << d_followed_ << std::endl;
-    std::cout << "d_reach_: " << d_reach_ << std::endl;
-    const bool follow = (d_followed_ < d_reach_);
-    std::cout << "Seguir a borda: " << follow << std::endl;
-    // Calcula a distância heurística
-    heuristic_distance_ = d_followed_ + d_reach_;
-    std::cout << "Distância heurística calculada: " << heuristic_distance_ << std::endl;
-
-    if (follow)
-    {
-        // moveToPoint(closest_point_on_segment.x, closest_point_on_segment.y);
-    }
-    else
-    {
-        // moveToPoint(goal_x_, goal_y_);
-    }
-
-    // cmd_vel.angular.z; // TODO verificar a velocidade angular para ignorar a detecção de obstáculos.
-    // cmd_vel_pub_.publish(cmd_vel);
-    return;
-    // Decisão baseada no estado atual
-    switch (current_state_)
-    {
-    case MOVE_TO_GOAL:
-        ROS_INFO("State: MOVE_TO_GOAL");
-        cmd_vel = calculateMoveToPointCommand(goal_x_, goal_y_);
-
-        if (isPathClear(calculateHeadingToGoal(), obstacle_threshold_) != 1)
-        {
-            ROS_INFO("Obstáculo detectado no caminho direto. Transição: MOVE_TO_GOAL -> FOLLOW_CONTOUR");
-            current_state_ = FOLLOW_CONTOUR;
-            // Salvar o ponto de entrada no contorno
-            cmd_vel = geometry_msgs::Twist(); // Publicar zero ou recalcular imediatamente para FOLLOW_CONTOUR
-        }
-        break;
-    case FOLLOW_CONTOUR:
-        ROS_INFO("State: FOLLOW_CONTOUR");
-        // tempPoint = tempPoint == geometry_msgs::Point() ? current_pose_.position : tempPoint; // Se tempPoint não foi definido, usa a posição atual
-        cmd_vel = calculateFollowContourCommand(); // TODO ignorar os obstáculos fora do cone e do retangulo de colisão
-
-        // moveToPoint(tempPoint.x, tempPoint.y); // Move para o ponto temporário
-
-        if (isPathClear(calculateHeadingToGoal(), obstacle_threshold_) == 1)
-        {
-            ROS_INFO("Caminho claro para o objetivo e distância melhorada. Transição: FOLLOW_CONTOUR -> MOVE_TO_GOAL");
-            current_state_ = MOVE_TO_GOAL;
-            cmd_vel = geometry_msgs::Twist();
-        }
-
-        break;
-    default:
-        ROS_ERROR("Unknown state encountered!");
-        stopRobot();
-        return;
-    }
-
-    ROS_INFO("Estado atual: %d", current_state_);
-    cmd_vel.angular.z; // TODO verificar a velocidade angular para ignorar a detecção de obstáculos.
-    cmd_vel_pub_.publish(cmd_vel);
-    ROS_DEBUG("Publicando cmd_vel: linear.x=%.2f, angular.z=%.2f", cmd_vel.linear.x, cmd_vel.angular.z);
 }
 
 // Refatorada para calcular e retornar Twist
@@ -1211,45 +1099,69 @@ void TangentBug::moveToPoint(double x, double y)
     const double yaw = tf2::getYaw(current_pose_.orientation);
 
     // erro angular normalizado para [-pi, pi]
-    const double angle_error = std::atan2(std::sin(angle_to_target - yaw),
-                                          std::cos(angle_to_target - yaw));
+    const double raw_ang_err = angle_to_target - yaw;
+    const double angle_error =
+        std::atan2(std::sin(raw_ang_err), std::cos(raw_ang_err));
 
     // chegou?
+    std::cout << "Distância ao alvo: " << distance << ", Tolerância: " << goal_tolerance_ << std::endl;
     if (distance < goal_tolerance_)
     {
         stopRobot();
         return;
     }
 
-    // ganhos simples (parametrizáveis)
-    const double k_ang = 1.5;
-    const double k_lin = 0.7;
+    // ====== PARÂMETROS (torne-os parametrizáveis via rosparam/dyn_reconf) ======
+    const double k_ang = 1.5;                // ganho P angular
+    const double max_w = max_angular_speed_; // limite de |w|
 
-    // saturações
-    double ang_cmd = k_ang * angle_error;
-    if (ang_cmd > max_angular_speed_)
-        ang_cmd = max_angular_speed_;
-    if (ang_cmd < -max_angular_speed_)
-        ang_cmd = -max_angular_speed_;
-    cmd.angular.z = ang_cmd;
+    const double vmax = max_linear_speed_; // limite de v
+    const double v_min_ratio = 0.08;       // fração do vmax para nunca zerar v
+    const double v_min = v_min_ratio * vmax;
 
-    // só avança se estiver razoavelmente alinhado
-    if (std::abs(angle_error) < 0.2)
-    {
-        cmd.linear.x = std::min(k_lin * distance, max_linear_speed_);
-    }
-    else
-    {
-        cmd.linear.x = 0.0; // evita “varrer” em arco largo
-    }
+    const double slow_dist = 1.0;                          // raio a partir do qual v chega perto de vmax
+    const double k_dist = 2.0 / std::max(1e-6, slow_dist); // inclinação da tanh
+    const double k_ang_gauss = 1.5;                        // quanto o erro angular "pesa" para reduzir v (gaussiana)
+    const double w_turn_knee = 0.8;                        // joelho para reduzir v quando |w| alto
 
-    std::cout << "moveToPoint: target=(" << x << "," << y << "), pos=(" << pos.x << "," << pos.y
-              << "), dist=" << distance << ", ang_err=" << angle_error
-              << ", cmd(v=" << cmd.linear.x << ", w=" << cmd.angular.z << ")" << std::endl;
+    // ====== CONTROLE ANGULAR (sempre comanda w) ======
+    double w_cmd = k_ang * angle_error;
+    if (w_cmd > max_w)
+        w_cmd = max_w;
+    if (w_cmd < -max_w)
+        w_cmd = -max_w;
+
+    // ====== CONTROLE LINEAR (sempre comanda v > 0 fora da tolerância) ======
+    // Componente por distância (0→longe, 1→perto do vmax):
+    // usa tanh para suavizar aproximação
+    const double dist_scale = std::tanh(k_dist * distance); // em (0, ~1)
+
+    // Atenuação suave por erro angular (nunca zera):
+    // gaussiana em torno de 0: exp(-k*err^2) ∈ (0,1]
+    const double ang_scale = std::exp(-k_ang_gauss * angle_error * angle_error);
+
+    // Redução quando curva é muito fechada (|w| alto)
+    const double turn_scale = 1.0 / (1.0 + std::abs(w_cmd) / std::max(1e-6, w_turn_knee));
+
+    // Velocidade alvo combinando os fatores; garante piso v_min
+    double v_cmd = vmax * dist_scale * ang_scale * turn_scale;
+    if (v_cmd < v_min)
+        v_cmd = v_min;
+    if (v_cmd > vmax)
+        v_cmd = vmax;
+
+    cmd.linear.x = v_cmd;
+    cmd.angular.z = w_cmd;
+
+    std::cout << "moveToPoint(simul): target=(" << x << "," << y << "), pos=("
+              << pos.x << "," << pos.y << "), dist=" << distance
+              << ", ang_err=" << angle_error
+              << ", cmd(v=" << cmd.linear.x << ", w=" << cmd.angular.z << ")"
+              << std::endl;
 
     cmd_vel_pub_.publish(cmd);
 
-    ROS_DEBUG("moveToPoint: dist=%.2f, ang_err=%.2f, cmd(v=%.2f,w=%.2f)",
+    ROS_DEBUG("moveToPoint(simul): dist=%.2f, ang_err=%.2f, cmd(v=%.2f,w=%.2f)",
               distance, angle_error, cmd.linear.x, cmd.angular.z);
 }
 
@@ -1295,77 +1207,320 @@ std::vector<int> TangentBug::detectObstacleBoundaries2D(const sensor_msgs::Laser
     return obstacle_boundaries;
 }
 
-// -----------------------------------------------------------------------------
-// Helper: infla um segmento deslocando cada ponto ao longo da normal do contorno
-// para o lado "de fora" (mais distante do sensor).
+static inline void normalize(double &x, double &y)
+{
+    const double n = std::hypot(x, y);
+    if (n > 1e-12)
+    {
+        x /= n;
+        y /= n;
+    }
+    else
+    {
+        x = 1.0;
+        y = 0.0;
+    }
+}
+
+static inline bool lineIntersection(double x1, double y1, double dx1, double dy1,
+                                    double x2, double y2, double dx2, double dy2,
+                                    double &xi, double &yi)
+{
+    // (x1,y1) + t*(dx1,dy1)  intersects  (x2,y2) + s*(dx2,dy2)
+    const double denom = dx1 * dy2 - dy1 * dx2; // cross((dx1,dy1),(dx2,dy2))
+    if (std::fabs(denom) < 1e-12)
+        return false; // paralelas/quase
+    const double rx = x2 - x1, ry = y2 - y1;
+    const double t = (rx * dy2 - ry * dx2) / denom;
+    xi = x1 + t * dx1;
+    yi = y1 + t * dy1;
+    return true;
+}
+
+/**
+ * Offset (inflar) uma polilinha no SENTIDO DO SENSOR.
+ * - Cada aresta é deslocada paralelamente pela normal que aponta para o sensor.
+ * - Nos vértices, unimos por interseção das duas arestas deslocadas (bevel/miter simples).
+ * - Se não houver interseção (quase paralelas), fazemos bevel: usamos o fim de uma e início da outra.
+ *
+ * @param seg            Polilinha em frame global (pontos crus do obstáculo).
+ * @param sensor_global  Posição do sensor no mesmo frame.
+ * @param d              Distância de inflação (ex.: raio do robô + margem).
+ * @param closed         true para polígono fechado; false para aberto (LIDAR típico).
+ */
 static inline std::vector<geometry_msgs::Point>
-inflateSegmentObstaclePerspective(const std::vector<geometry_msgs::Point> &seg,
-                                  const geometry_msgs::Point &sensor_global,
-                                  double d)
+offsetPolylineTowardSensor(const std::vector<geometry_msgs::Point> &seg,
+                           const geometry_msgs::Point &sensor_global,
+                           double d,
+                           bool closed = false)
 {
     std::vector<geometry_msgs::Point> out;
-    out.reserve(seg.size());
-    auto rot90 = [](double x, double y)
-    { return std::pair<double, double>{-y, x}; };
-
-    if (seg.empty())
+    const size_t N = seg.size();
+    if (N == 0)
         return out;
-
-    for (size_t i = 0; i < seg.size(); ++i)
+    if (N == 1)
     {
-        const auto &p = seg[i];
+        std::cout << "offsetPolylineTowardSensor: single point, creating radial offset." << std::endl;
+        // ponto isolado: desloca radialmente PARA o sensor (ponto navegável seguro)
+        geometry_msgs::Point p = seg[0];
+        double vx = sensor_global.x - p.x;
+        double vy = sensor_global.y - p.y;
+        normalize(vx, vy); // vetor do ponto para o sensor
+        geometry_msgs::Point q;
+        q.x = p.x + d * vx;
+        q.y = p.y + d * vy;
+        q.z = 0.0;
+        out.push_back(q);
+        return out;
+    }
 
-        // Tangente por diferenças centrais; extremos usam vizinho único
+    // Para cada aresta i: [Pi -> P(i+1)]
+    const size_t M = closed ? N : (N - 1);
+
+    // Pré-calcula tangentes e normais (para o sensor) e endpoints deslocados
+    struct SegOff
+    {
+        double ax, ay, bx, by;
         double tx, ty;
-        if (i == 0)
-        {
-            tx = seg[1].x - p.x;
-            ty = seg[1].y - p.y;
-        }
-        else if (i + 1 == seg.size())
-        {
-            tx = p.x - seg[i - 1].x;
-            ty = p.y - seg[i - 1].y;
-        }
-        else
-        {
-            tx = seg[i + 1].x - seg[i - 1].x;
-            ty = seg[i + 1].y - seg[i - 1].y;
-        }
+    }; // offset endpoints + direção
+    std::vector<SegOff> off;
+    off.reserve(M);
 
-        double nrm = std::hypot(tx, ty);
-        if (nrm < 1e-8)
-        {
-            tx = 1.0;
-            ty = 0.0;
-            nrm = 1.0;
-        }
-        tx /= nrm;
-        ty /= nrm;
+    for (size_t i = 0; i < M; ++i)
+    {
+        const size_t i0 = i;
+        const size_t i1 = (i + 1) % N;
+        const auto &A = seg[i0];
+        const auto &B = seg[i1];
 
-        auto n = rot90(tx, ty);
-        double nx = n.first;
-        double ny = n.second;
+        // tangente do segmento
+        double tx = B.x - A.x;
+        double ty = B.y - A.y;
+        normalize(tx, ty);
 
-        // Escolhe o lado "de fora": o que se afasta do sensor
-        const double vx = p.x - sensor_global.x;
-        const double vy = p.y - sensor_global.y;
-        if (nx * vx + ny * vy > 0.0)
+        // normal candidata (rot90 da tangente)
+        double nx = -ty, ny = tx;
+
+        // decidir sentido PARA O SENSOR:
+        // use o ponto médio para definir v = (sensor - mid); dot(n, v) > 0 => n aponta para o sensor
+        const double mx = 0.5 * (A.x + B.x);
+        const double my = 0.5 * (A.y + B.y);
+        const double vx = sensor_global.x - mx;
+        const double vy = sensor_global.y - my;
+        if (nx * vx + ny * vy < 0.0)
         {
             nx = -nx;
             ny = -ny;
-        }
+        } // garante n -> sensor
 
-        const double max_d = std::max(0.0, std::hypot(vx, vy) - 1e-3);
-        const double d_use = std::min(d, max_d);
+        // desloca endpoints da aresta
+        SegOff s;
+        s.tx = tx;
+        s.ty = ty;
+        s.ax = A.x + d * nx;
+        s.ay = A.y + d * ny;
+        s.by = B.y + d * ny;
+        s.bx = B.x + d * nx;
+        off.push_back(s);
+    }
+
+    // Construir vértices de saída
+    out.reserve(N + (closed ? 0 : 1));
+
+    if (!closed)
+    {
+        // endpoint inicial: apenas A0'
+        geometry_msgs::Point q0;
+        q0.x = off[0].ax;
+        q0.y = off[0].ay;
+        q0.z = 0.0;
+        out.push_back(q0);
+    }
+
+    // vértices internos: interseção das retas deslocadas adjacentes
+    for (size_t i = 0; i < (closed ? N : (N - 2)); ++i)
+    {
+        // no caso aberto, o vértice i+1 da polilinha original é “interno”
+        const size_t k = closed ? i : (i + 1);
+
+        const size_t segL = (k + M - 1) % M; // aresta à esquerda (anterior)
+        const size_t segR = k % M;           // aresta à direita (próxima)
+
+        // reta L: passa por (aL -> bL), direção tL
+        const SegOff &L = off[segL];
+        // reta R: passa por (aR -> bR), direção tR
+        const SegOff &R = off[segR];
+
+        double xi, yi;
+        bool ok = lineIntersection(L.ax, L.ay, L.tx, L.ty,
+                                   R.ax, R.ay, R.tx, R.ty,
+                                   xi, yi);
+
         geometry_msgs::Point q;
-        q.x = p.x + d_use * nx;
-        q.y = p.y + d_use * ny;
-        q.z = 0.0;
+        if (ok)
+        {
+            q.x = xi;
+            q.y = yi;
+            q.z = 0.0;
+        }
+        else
+        {
+            // quase paralelas: bevel simples usando “fim de L” e “início de R”
+            // aqui escolhemos o ponto médio entre L.b e R.a para evitar gaps/overlaps
+            q.x = 0.5 * (L.bx + R.ax);
+            q.y = 0.5 * (L.by + R.ay);
+            q.z = 0.0;
+        }
         out.push_back(q);
     }
+
+    if (!closed)
+    {
+        // endpoint final: apenas B_last'
+        const SegOff &last = off.back();
+        geometry_msgs::Point qN;
+        qN.x = last.bx;
+        qN.y = last.by;
+        qN.z = 0.0;
+        out.push_back(qN);
+    }
+    else
+    {
+        // fechado: também fecha o polígono; já adicionamos N vértices internos,
+        // então não precisa repetir o primeiro.
+    }
+
+    if (!closed && out.size() >= 2)
+    {
+        // primeira ponta: move no sentido oposto à aresta (out[0] -> out[1])
+        {
+            double dx = out[1].x - out[0].x;
+            double dy = out[1].y - out[0].y;
+            const double n = std::hypot(dx, dy);
+            if (n > 1e-8)
+            {
+                dx /= n;
+                dy /= n;
+                out[0].x -= d * dx;
+                out[0].y -= d * dy;
+            }
+        }
+        // última ponta: move no mesmo sentido da aresta (out[n-2] -> out[n-1])
+        {
+            const size_t npts = out.size();
+            double dx = out[npts - 1].x - out[npts - 2].x;
+            double dy = out[npts - 1].y - out[npts - 2].y;
+            const double n = std::hypot(dx, dy);
+            if (n > 1e-8)
+            {
+                dx /= n;
+                dy /= n;
+                out[npts - 1].x += d * dx;
+                out[npts - 1].y += d * dy;
+            }
+        }
+    }
+
     return out;
 }
+
+// -----------------------------------------------------------------------------
+// Helper: infla um segmento deslocando cada ponto ao longo da normal do contorno
+// para o lado "de fora" (mais distante do sensor).
+// static inline std::vector<geometry_msgs::Point>
+// inflateSegmentObstaclePerspective(const std::vector<geometry_msgs::Point>& seg,
+//                                   const geometry_msgs::Point& sensor_global,
+//                                   double d)
+// {
+//     std::vector<geometry_msgs::Point> out;
+//     out.reserve(seg.size());
+//     auto rot90 = [](double x, double y) { return std::pair<double,double>{-y, x}; };
+
+//     const size_t N = seg.size();
+//     if (N == 0) return out;
+
+//     // Caso N == 1: usa vetor radial em relação ao sensor
+//     if (N == 1) {
+//         const auto& p = seg[0];
+//         double vx = p.x - sensor_global.x;
+//         double vy = p.y - sensor_global.y;
+//         double nrm = std::hypot(vx, vy);
+//         if (nrm < 1e-8) nrm = 1.0;
+//         vx /= nrm; vy /= nrm;
+
+//         // >>> escolha a direção conforme sua intenção:
+//         // Para INFLAR PARA LONGE do sensor (engordar obstáculo):
+//         //   normal = +radial (afastando do sensor)
+//         // Para INFLAR PARA O LADO DO SENSOR:
+//         //   normal = -radial
+//         // double nx = vx, ny = vy;        // longe do sensor
+//         double nx = -vx, ny = -vy;    // para o lado do sensor
+
+//         geometry_msgs::Point q;
+//         q.x = p.x + d * nx;
+//         q.y = p.y + d * ny;
+//         q.z = 0.0;
+//         out.push_back(q);
+//         return out;
+//     }
+
+//     for (size_t i = 0; i < N; ++i) {
+//         const auto& p = seg[i];
+
+//         // Tangente (diferenças centrais / unilaterais nas pontas)
+//         double tx, ty;
+//         if (i == 0) {
+//             tx = seg[1].x - p.x;  ty = seg[1].y - p.y;
+//         } else if (i + 1 == N) {
+//             tx = p.x - seg[i-1].x; ty = p.y - seg[i-1].y;
+//         } else {
+//             tx = seg[i+1].x - seg[i-1].x; ty = seg[i+1].y - seg[i-1].y;
+//         }
+
+//         double nrm = std::hypot(tx, ty);
+//         if (nrm < 1e-8) { tx = 1.0; ty = 0.0; nrm = 1.0; }
+//         tx /= nrm; ty /= nrm;
+
+//         auto n = rot90(tx, ty);
+//         double nx = n.first, ny = n.second;
+
+//         // Vetor do sensor ao ponto
+//         const double vx = p.x - sensor_global.x;
+//         const double vy = p.y - sensor_global.y;
+
+//         // >>> Escolha a direção da normal:
+//         // (A) Inflar PARA O LADO DO SENSOR (contrair em direção ao robô)
+//         if (nx*vx + ny*vy > 0.0) { nx = -nx; ny = -ny; }
+
+//         // (B) Inflar PARA LONGE DO SENSOR (engordar obstáculo)  <<< comum em navegação
+//         // if (nx*vx + ny*vy < 0.0) { nx = -nx; ny = -ny; }
+
+//         // Limite para não ultrapassar o sensor (sanidade)
+//         const double max_to_sensor = std::max(d, std::hypot(vx, vy) - 1e-3);
+
+//         // Miter-limit simples em quinas
+//         double miter = max_to_sensor;
+//         if (i > 0) {
+//             const double ex = p.x - seg[i-1].x;
+//             const double ey = p.y - seg[i-1].y;
+//             miter = std::max(miter, 0.5 * std::hypot(ex, ey));
+//         }
+//         if (i + 1 < N) {
+//             const double ex = seg[i+1].x - p.x;
+//             const double ey = seg[i+1].y - p.y;
+//             miter = std::max(miter, 0.5 * std::hypot(ex, ey));
+//         }
+
+//         const double d_use = std::min(d, miter);
+
+//         geometry_msgs::Point q;
+//         q.x = p.x + d_use * nx;
+//         q.y = p.y + d_use * ny;
+//         q.z = 0.0;
+//         out.push_back(q);
+//     }
+//     return out;
+// }
 
 /**
  * Extrai segmentos de obstáculos 2D a partir de dados de varredura LIDAR.
@@ -1459,9 +1614,9 @@ std::vector<std::vector<geometry_msgs::Point>> TangentBug::extractObstacleSegmen
         if (!current_segment_raw.empty())
         {
             const double inflate_m = safety_margin_; // ajuste conforme seus membros/params
-            auto inflated = inflateSegmentObstaclePerspective(current_segment_raw,
-                                                              origin_global.point,
-                                                              inflate_m);
+            auto inflated = offsetPolylineTowardSensor(current_segment_raw,
+                                                       origin_global.point,
+                                                       inflate_m);
             if (!inflated.empty())
                 segments.push_back(std::move(inflated));
             current_segment_raw.clear();

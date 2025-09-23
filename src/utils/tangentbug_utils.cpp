@@ -377,6 +377,71 @@ namespace tangentbug_utils
         return result;
     }
 
+    /**
+     * @brief Gera dois segmentos paralelos ao segmento definido por p1 e p2,
+     *        ambos a uma distância 'dist' em lados opostos (esquerda/direita).
+     *        O segmento original fica centralizado entre eles.
+     *
+     * @param p1   Ponto inicial do segmento original.
+     * @param p2   Ponto final do segmento original.
+     * @param dist Distância lateral para os segmentos paralelos.
+     * @return     Vetor contendo dois segmentos: {{p1_left, p2_left}, {p1_right, p2_right}}
+     */
+    std::vector<std::vector<geometry_msgs::Point>> parallelSegmentsAtDistance(
+        const geometry_msgs::Point &p1,
+        const geometry_msgs::Point &p2,
+        double dist)
+    {
+        std::vector<std::vector<geometry_msgs::Point>> segments(2, std::vector<geometry_msgs::Point>(2));
+
+        // Vetor diretor do segmento original
+        const double dx = p2.x - p1.x;
+        const double dy = p2.y - p1.y;
+        const double len = std::hypot(dx, dy);
+
+        if (len < 1e-9 || dist == 0.0)
+        {
+            segments[0][0] = p1;
+            segments[0][1] = p2;
+            segments[1][0] = p1;
+            segments[1][1] = p2;
+            return segments;
+        }
+
+        // Normal unitária "para a esquerda" (rotação de +90°)
+        const double nx = -dy / len;
+        const double ny = dx / len;
+
+        // Deslocamentos
+        const double ox = dist * nx;
+        const double oy = dist * ny;
+
+        // Segmento paralelo à esquerda
+        geometry_msgs::Point p1_left, p2_left;
+        p1_left.x = p1.x + ox;
+        p1_left.y = p1.y + oy;
+        p1_left.z = p1.z;
+        p2_left.x = p2.x + ox;
+        p2_left.y = p2.y + oy;
+        p2_left.z = p2.z;
+
+        // Segmento paralelo à direita
+        geometry_msgs::Point p1_right, p2_right;
+        p1_right.x = p1.x - ox;
+        p1_right.y = p1.y - oy;
+        p1_right.z = p1.z;
+        p2_right.x = p2.x - ox;
+        p2_right.y = p2.y - oy;
+        p2_right.z = p2.z;
+
+        segments[0][0] = p1_left;
+        segments[0][1] = p2_left;
+        segments[1][0] = p1_right;
+        segments[1][1] = p2_right;
+
+        return segments;
+    }
+
     void clearAllSpheresAndSegments(std::string object_name)
     {
         ros::NodeHandle nh;
