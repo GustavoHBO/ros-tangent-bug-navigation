@@ -44,6 +44,7 @@ namespace tangentbug_utils
 
     void spawnSphereAt(double x, double y, double z, const std::string &color_hex, int max_spheres)
     {
+        return;
         ros::NodeHandle nh;
         ros::ServiceClient spawn_client = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_sdf_model");
         ros::ServiceClient delete_client = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
@@ -139,6 +140,7 @@ namespace tangentbug_utils
         const std::string &color_hex,
         int max_segments)
     {
+        return;
         ros::NodeHandle nh;
         ros::ServiceClient spawn_client = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_sdf_model");
         ros::ServiceClient delete_client = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
