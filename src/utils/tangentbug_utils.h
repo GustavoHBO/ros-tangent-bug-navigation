@@ -1,6 +1,8 @@
 #pragma once
 
 #include <geometry_msgs/Point.h>
+#include <sensor_msgs/LaserScan.h>
+#include <tf2/LinearMath/Transform.h>
 
 namespace tangentbug_utils
 {
@@ -8,6 +10,25 @@ namespace tangentbug_utils
     {
         geometry_msgs::Point point;
         bool intersects = false;
+    };
+
+    struct Edge
+    {
+        int from, to;
+        double cost;
+        bool isVirtual = false; // aresta virtual (não representa um obstáculo real)
+    };
+
+    struct Segment
+    {
+        geometry_msgs::Point a;
+        geometry_msgs::Point b;
+    };
+
+    struct Graph
+    {
+        std::vector<geometry_msgs::Point> nodes; // remaining points (filtered)
+        std::vector<std::vector<Edge>> edges;    // edges between nodes within gap
     };
 
     // Declarations only
@@ -31,4 +52,20 @@ namespace tangentbug_utils
         double dist);
 
     void clearAllSpheresAndSegments(std::string object_name = "sphere_OR_segment_");
+    void buildG1(const geometry_msgs::Point &x,
+                 const geometry_msgs::Point &T,
+                 Graph &LTG, // Grafo LTG (nós + arestas)
+                 Graph &G1   // Grafo resultante (nós + arestas)
+    );
+
+    std::vector<geometry_msgs::Point> laserScanToPoints(
+        const sensor_msgs::LaserScan &scan,
+        const tf2::Transform &tf_laser_to_odom);
+
+    Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts, double max_gap);
+
+    Edge findClosestEdgeToTarget(
+        const geometry_msgs::Point &T,
+        Graph &subgraphG1);
+
 }

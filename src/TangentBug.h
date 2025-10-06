@@ -84,7 +84,6 @@ public:
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
-    TurnThenMoveState current_turn_then_move_state_;
     geometry_msgs::Point target_point_for_turn_then_move_; // O ponto para onde estamos indo
     double alignment_tolerance_rad_;                       // Tolerância angular para considerar o alinhamento completo
 
@@ -139,7 +138,7 @@ public:
     double max_angular_speed_; // Velocidade angular máxima do robô em rad/s
 
     // Funções auxiliares
-    void stopRobot();
+    void stopRobot(); // Ensure only one declaration exists and remove/rename any duplicate with different return type in the implementation file
     void rotateInPlace(double angular_speed = 0.5, double duration_seconds = 1.0);
     void moveToGoal(double distance_to_goal);
     void followContour();
@@ -185,6 +184,7 @@ public:
         double threshold);
     geometry_msgs::Point findClosestEndpointToPoint(
         const std::vector<geometry_msgs::Point> &segment, const geometry_msgs::Point &target);
+
     std::vector<geometry_msgs::Point> findBestSegmentTowardGoal(const std::vector<std::vector<geometry_msgs::Point>> &segments, const geometry_msgs::Point &goal);
     std::vector<geometry_msgs::Point> offsetSegmentTowardRobot(const std::vector<geometry_msgs::Point> &segment, const geometry_msgs::Point &robot, double offset_distance_cm);
     std::vector<geometry_msgs::Point> offsetSegmentTowardRobotPerspective(

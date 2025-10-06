@@ -42,7 +42,7 @@ TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh),
     nh_.param("obstacle_threshold", obstacle_threshold_, 0.6);
     ROS_INFO("Limite de obstáculo: %f", obstacle_threshold_);
 
-    nh_.param("gap_threshold", gap_threshold_, 0.8);
+    nh_.param("gap_threshold", gap_threshold_, 1.0);
     ROS_INFO("Limite de lacuna: %f", gap_threshold_);
 
     nh_.param("segment_switch_threshold_percent", segment_switch_threshold_percent_, 0.05); // 5% como padrão
@@ -200,177 +200,118 @@ void TangentBug::computeControl()
     std::cout << "Extraindo segmentos de obstáculos do LIDAR..." << std::endl;
     std::cout << "Número de leituras do LIDAR: " << scan.ranges.size() << std::endl;
 
-    // for (size_t i = 0; i < scan.ranges.size(); ++i)
-    // {
-    //     std::cout << "Leitura " << i << ": " << scan.ranges[i] << std::endl;
-    // }
-
     const int num_ranges_valid = std::count_if(scan.ranges.begin(), scan.ranges.end(),
                                                [](float range)
                                                { return !std::isnan(range) && range > 0.0 && std::isfinite(range); });
     std::cout << "Número de leituras válidas do LIDAR: " << num_ranges_valid << std::endl;
 
-    const std::vector<std::vector<geometry_msgs::Point>> global_segments = extractObstacleSegments2D(scan, gap_threshold_);
-    std::cout << "Número de segmentos globais: " << global_segments.size() << std::endl;
-    // Segmentos simplificados
-    std::vector<std::vector<geometry_msgs::Point>> simplified_segments = std::vector<std::vector<geometry_msgs::Point>>();
+    std::cout << "Estado atual: ";
+    if (current_state_ == MOVE_TO_GOAL)
+        std::cout << "MOVE_TO_GOAL" << std::endl;
+    else if (current_state_ == FOLLOW_CONTOUR)
+        std::cout << "FOLLOW_CONTOUR" << std::endl;
+    else if (current_state_ == LEAVE_CONTOUR)
+        std::cout << "LEAVE_CONTOUR" << std::endl;
+    else if (current_state_ == EMERGENCY_STOP)
+        std::cout << "EMERGENCY_STOP" << std::endl;
+    else
+        std::cout << "UNKNOWN" << std::endl;
 
-    // Percorre todos os segmentos globais e simplifica cada um deles
-    for (const auto &segment : global_segments)
-    {
-        // Simplifica cada segmento
-        std::vector<geometry_msgs::Point> simplified_segment = simplifySegment(segment, robot_width_, 1.0);
-        //  simplified_segment = offsetSegmentTowardRobotPerspective(simplified_segment, robot_position, 30.0);
-        if (!simplified_segment.empty())
-        {
-            simplified_segments.push_back(simplified_segment);
-        }
-    }
-
-    for (const auto &segment : simplified_segments)
-    {
-        std::cout << "Segmento simplificado: " << std::endl;
-        for (const auto &point : segment)
-        {
-            std::cout << "(" << point.x << ", " << point.y << ") " << std::endl;
-            spawnSphereAt(point.x, point.y, 0.0, "#00FF00", 1); // Marca os pontos do segmento simplificado no Gazebo
-        }
-    }
-
-    std::cout << "Número de segmentos simplificados: " << simplified_segments.size() << std::endl;
-    const int total_points_global_segments = std::accumulate(global_segments.begin(), global_segments.end(), 0,
-                                                             [](int sum, const std::vector<geometry_msgs::Point> &segment)
-                                                             { return sum + segment.size(); });
-
-    const int total_points_simplified_segments = std::accumulate(simplified_segments.begin(), simplified_segments.end(), 0,
-                                                                 [](int sum, const std::vector<geometry_msgs::Point> &segment)
-                                                                 { return sum + segment.size(); });
-
-    ROS_DEBUG("Total de pontos nos segmentos globais: %d, Total de pontos nos segmentos simplificados: %d", total_points_global_segments, total_points_simplified_segments);
-    std::cout << "Total de pontos nos segmentos globais: " << total_points_global_segments
-              << ", Total de pontos nos segmentos simplificados: " << total_points_simplified_segments << std::endl;
-
-    // Procura o segmento de reta que intercepta o segmento do robô ao objetivo
-    std::vector<geometry_msgs::Point> intersection_segment;
-
-    // Encontrar a interseção mais próxima
-    double min_dist_intersect = std::numeric_limits<double>::max();
-    double current_min_dist_to_goal = std::numeric_limits<double>::max();
-    geometry_msgs::Point closest_intersection;
-    geometry_msgs::Point closest_point_to_goal = point_goal_;
-    bool found_intersection = false;
-
-    // spawnLineSegment(robot_position.x, robot_position.y, 0.0, goal_x_, goal_y_, 0.0, "#430073"); // Linha do robô ao objetivo
-    std::vector<std::vector<geometry_msgs::Point>> parallel_segments = parallelSegmentsAtDistance(robot_position, point_goal_, (robot_width_ + safety_margin_) / 2.0);
-    spawnLineSegment(parallel_segments[0][0].x, parallel_segments[0][0].y, 0.0,
-                     parallel_segments[0][1].x, parallel_segments[0][1].y, 0.0, "#000FFF", 2); // Linha paralela 1
-    spawnLineSegment(parallel_segments[1][0].x, parallel_segments[1][0].y, 0.0,
-                     parallel_segments[1][1].x, parallel_segments[1][1].y, 0.0, "#000FFF", 2); // Linha paralela 2
-
-    std::vector<std::vector<geometry_msgs::Point>> parallel_segments_robot_to_goal = parallelSegmentsAtDistance(robot_position, point_goal_, robot_width_/2.0);
-    spawnLineSegment(parallel_segments_robot_to_goal[0][0].x, parallel_segments_robot_to_goal[0][0].y, 0.0,
-                     parallel_segments_robot_to_goal[0][1].x, parallel_segments_robot_to_goal[0][1].y, 0.0, "#00FFFF", 2); // Linha paralela 1
-    spawnLineSegment(parallel_segments_robot_to_goal[1][0].x, parallel_segments_robot_to_goal[1][0].y, 0.0,
-                     parallel_segments_robot_to_goal[1][1].x, parallel_segments_robot_to_goal[1][1].y, 0.0, "#00FFFF", 2); // Linha paralela 2
-    for (const auto &segment : simplified_segments)
-    {
-        for (size_t i = 0; i + 1 < segment.size(); ++i)
-        {
-            bool intersects;
-            // std::cout << "Verificando o ponto " << i << " do segmento: (" << segment[i].x << ", " << segment[i].y << ")"
-            //           << " até o ponto " << i + 1 << ": (" << segment[i + 1].x << ", " << segment[i + 1].y << ")" << std::endl;
-            // std::cout << "Segmento do robô ao objetivo: (" << segment_robot_to_goal[0].x << ", " << segment_robot_to_goal[0].y << ")"
-            //           << " até (" << segment_robot_to_goal[1].x << ", " << segment_robot_to_goal[1].y << ")" << std::endl;
-
-            IntersectionResult intersection = intersectSegments(segment[i], segment[i + 1],
-                                                                parallel_segments[0][0], parallel_segments[0][1]);
-
-            geometry_msgs::Point inter = intersection.point;
-            intersects = intersection.intersects;
-            if (!intersects)
-            {
-                intersection = intersectSegments(
-                    segment[i], segment[i + 1],
-                    parallel_segments[1][0], parallel_segments[1][1]);
-                inter = intersection.point;
-                intersects = intersection.intersects;
-            }
-
-            spawnLineSegment(segment[i].x, segment[i].y, 0.0, segment[i + 1].x, segment[i + 1].y, 0.0, "#787878", segment.size()); // Linha do segmento do obstáculo
-
-            double dist;
-            if (intersects)
-            {
-                std::cout << "Interseção encontrada no ponto: (" << inter.x << ", " << inter.y << ")" << std::endl;
-                dist = calculateDistance(robot_position.x, robot_position.y, inter.x, inter.y);
-                std::cout << "Distância do robô até a interseção: " << dist << std::endl;
-
-                intersection_segment = {segment[i], segment[i + 1]};
-                if (dist < min_dist_intersect)
-                {
-                    min_dist_intersect = dist;
-                    closest_intersection = inter;
-                    found_intersection = true;
-                }
-                // if (dist < current_min_dist_to_goal)
-                // {
-                //     current_min_dist_to_goal = dist;
-                //     closest_point_to_goal = inter;
-                // }
-            }
-
-            dist = calculateDistance(segment[i].x, segment[i].y, goal_x_, goal_y_);
-            std::cout << "Ponto do segmento: (" << segment[i].x << ", " << segment[i].y << ")" << std::endl;
-            std::cout << "Distância do segmento até o objetivo: " << dist << std::endl;
-            if (dist < current_min_dist_to_goal)
-            {
-                current_min_dist_to_goal = dist;
-                closest_point_to_goal = segment[i];
-            }
-            if (i + 2 == segment.size())
-            {
-                dist = calculateDistance(segment[i + 1].x, segment[i + 1].y, goal_x_, goal_y_);
-                std::cout << "Ponto do segmento: (" << segment[i + 1].x << ", " << segment[i + 1].y << ")" << std::endl;
-                std::cout << "Distância do segmento até o objetivo: " << dist << std::endl;
-                if (dist < current_min_dist_to_goal)
-                {
-                    current_min_dist_to_goal = dist;
-                    closest_point_to_goal = segment[i + 1];
-                }
-            }
-        }
-    }
-
-    // if (current_min_dist_to_goal > distance_to_goal || current_state_ == MOVE_TO_GOAL)
-    // {
-    //     std::cout << "Podemos ir direto ao objetivo" << std::endl;
-    //     d_reach_point_ = point_goal_;
-    // }
-
-    std::cout << "Estado atual: " << (current_state_ == MOVE_TO_GOAL ? "MOVE_TO_GOAL" : current_state_ == FOLLOW_CONTOUR ? "FOLLOW_CONTOUR"
-                                                                                                                         : "LEAVE_CONTOUR")
-              << std::endl;
-    std::cout << "Tem interseção: " << (found_intersection ? "Sim" : "Não") << std::endl;
-    std::cout << "d_reach_:                     " << d_reach_ << std::endl;
-    std::cout << "distance_to_goal:             " << distance_to_goal << std::endl;
-    std::cout << "current_min_dist_to_goal:     " << current_min_dist_to_goal << std::endl;
-    std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
-    std::cout << "Ponto atual do robô:          (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
-
-    const float heuristic_to_goal_via_closest_obstacle_point = calculateDistance(robot_position.x, robot_position.y,
-                                                                                 closest_point_to_goal.x, closest_point_to_goal.y) +
-                                                               calculateDistance(closest_point_to_goal.x, closest_point_to_goal.y,
-                                                                                 goal_x_, goal_y_);
     // Indo para o objetivo
     if (current_state_ == MOVE_TO_GOAL)
     {
-        current_min_dist_to_goal = current_min_dist_to_goal == std::numeric_limits<double>::max() ? distance_to_goal : current_min_dist_to_goal;
-        d_reach_ = distance_to_goal < d_reach_ ? distance_to_goal : d_reach_;
-        if (current_min_dist_to_goal > distance_to_goal || found_intersection)
-        // if (heuristic_to_goal_via_closest_obstacle_point > distance_to_goal || found_intersection)
-        // if (found_intersection || current_min_dist_to_goal > d_reach_)
-        // if (!(!found_intersection || heuristic_to_goal_via_closest_obstacle_point < distance_to_goal))
-        // if (found_intersection)
+        geometry_msgs::TransformStamped tf_msg;
+        try
+        {
+            tf_msg = tf_buffer_.lookupTransform("odom", scan.header.frame_id,
+                                                scan.header.stamp, ros::Duration(0.05));
+        }
+        catch (tf2::TransformException &ex)
+        {
+            ROS_WARN("%s", ex.what());
+            return;
+        }
+
+        tf2::Transform tf_laser_to_odom;
+        tf2::fromMsg(tf_msg.transform, tf_laser_to_odom);
+
+        Graph subgraphG1; // Grafo completo do LIDAR
+
+        auto odom_points = laserScanToPoints(scan, tf_laser_to_odom);
+        // Simplifica os segmentos de obstáculos.
+        Graph g = makeGraphRunsByGap(odom_points, gap_threshold_);
+        g.nodes.push_back(robot_position); // Adiciona a posição atual do robô como um nó do grafo
+        // Exibindo a quantidade de pontos e arestas do LTG
+        std::cout << "LTG tem " << g.nodes.size() << " pontos e " << g.edges.size() << " arestas." << std::endl;
+        for(const auto &node : g.nodes) {
+            std::cout << " - (" << node.x << ", " << node.y << ", " << node.z << ")" << std::endl;
+        }
+
+        for(const auto &edges : g.edges) {
+            for(const auto &edge : edges) {
+                std::cout << " - from: " << edge.from << " to: " << edge.to << " cost: " << edge.cost << std::endl;
+            }
+            std::cout << "----" << std::endl;
+        }
+
+        // subgraphG1.nodes são todos vertices visíveis do LTG que estão mais próximos do objetivo comparados com o ponto atual do robô.
+        // subgraphG1.edges são as arestas do grafo (índices em subgraphG1.nodes) que satisfazem (V - x)·(T - x) > 0 e d(V,T) < d(x,T)
+        buildG1(robot_position, point_goal_, g, subgraphG1);
+
+        // Exibindo a quantidade de pontos e arestas do G1
+        std::cout << "subgraphG1 tem " << subgraphG1.nodes.size() << " pontos e " << subgraphG1.edges.size() << " arestas." << std::endl;
+        std::cout << "subgraphG1 tem arestas: " << std::endl;
+        int edge_count = 0;
+        for (const auto &edges : subgraphG1.edges)
+        {
+            for (const auto &edge : edges)
+            {
+                edge_count++;
+                std::cout << " - from: " << edge.from << " to: " << edge.to << " cost: " << edge.cost << std::endl;
+            }
+        }
+        std::cout << "Total de arestas em subgraphG1: " << edge_count << std::endl;
+
+        // Exibindo pontos do subgraphG1
+        std::cout << "Pontos do subgraphG1:" << std::endl;
+        for (const auto &point : subgraphG1.nodes)
+        {
+            spawnSphereAt(point.x, point.y, 0.0, "#00FF00", subgraphG1.nodes.size()); // Marca os pontos do subgraphG1 no Gazebo
+            std::cout << " - (" << point.x << ", " << point.y << ", " << point.z << ")" << std::endl;
+        }
+
+        // Exibindo arestas do subgraphG1
+        std::cout << "Arestas do subgraphG1:" << std::endl;
+        for (const auto &edges : subgraphG1.edges)
+        {
+            for (const auto &edge : edges)
+            {
+                if (edge.from < 0 || edge.from >= subgraphG1.nodes.size() || edge.to < 0 || edge.to >= subgraphG1.nodes.size())
+                {
+                    std::cerr << "Aresta inválida: from " << edge.from << " to " << edge.to << std::endl;
+                    continue;
+                }
+                const auto &from = subgraphG1.nodes[edge.from];
+                const auto &to = subgraphG1.nodes[edge.to];
+                std::cout << " - From (" << from.x << ", " << from.y << ", " << from.z << ") to ("
+                          << to.x << ", " << to.y << ", " << to.z << ")" << " cost: " << edge.cost << std::endl;
+                spawnLineSegment(from.x, from.y, 0.0, to.x, to.y, 0.0,
+                                 "#00FFFF", edges.size()); // Marca as arestas do G1 no Gazebo
+            }
+        }
+
+        geometry_msgs::Point node = subgraphG1.nodes.back();
+        bool gotoFollowContour = true;
+        for(const auto &node : subgraphG1.nodes) {
+            const double to_goal = calculateDistance(node.x, node.y, goal_x_, goal_y_);
+            if(to_goal < distance_to_goal) {
+                gotoFollowContour = false;
+                break;
+            }
+        }
+
+        // Se G1_edges estiver vazio, significa que não há arestas válidas para seguir, então estamos no mínimo local.
+        if (gotoFollowContour)
         {
             stopRobot();
             std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
@@ -379,63 +320,79 @@ void TangentBug::computeControl()
             std::cout << "Vamos ter que seguir a borda" << std::endl;
             // d_reach_point_ = intersection_segment[0]; // Inicializa com o primeiro ponto do primeiro segmento
             // ultimo ponto do segmento
-            d_reach_point_ = simplified_segments[0][simplified_segments[0].size() - 1];
+            // d_reach_point_ = simplified_segments[0][simplified_segments[0].size() - 1];
         }
         else
         {
-            std::cout << "Podemos ir direto ao objetivo" << std::endl;
-            d_reach_point_ = point_goal_;
-            // d_reach_ = distance_to_goal; // Eu acho que tem que ser assim
+            std::cout << "Continuamos no estado MOVE_TO_GOAL" << std::endl;
+            // Escolhe o ponto em G1 que está mais próximo do objetivo
+            Edge closest_edge = findClosestEdgeToTarget(point_goal_, subgraphG1);
+            d_reach_point_ = subgraphG1.nodes[closest_edge.to];
+            std::cout << "Ponto de alcance atualizado para: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
         }
     }
+    std::cout << "Indo para o estado: ";
+    if (current_state_ == MOVE_TO_GOAL)
+        std::cout << "MOVE_TO_GOAL" << std::endl;
     else if (current_state_ == FOLLOW_CONTOUR)
-    {
-
-        if (current_min_dist_to_goal < d_reach_ && !found_intersection )
-        {
-            stopRobot();
-            std::cout << "Pressione qualquer tecla para deixar o contorno e ir para o objetivo..." << std::endl;
-            std::cin.get(); // Espera por uma entrada do usuário
-            std::cout << "G2 não é vazio" << std::endl;
-            d_reach_point_ = closest_point_to_goal;
-            current_state_ = LEAVE_CONTOUR;
-        }
-        else
-        {
-            std::cout << "Continuando a seguir o contorno" << std::endl;
-            d_reach_point_ = simplified_segments.size() > 0 ? simplified_segments[0][simplified_segments[0].size() - 1] : point_goal_; // Continua indo para o primeiro ponto do primeiro segmento
-            // d_reach_point_ = closest_point_to_goal;
-        }
-        d_reach_ = distance_to_goal < d_reach_ ? distance_to_goal : d_reach_;
-
-        // else
-        // {
-        //     d_reach_point_ = closest_point_to_goal;
-        //     d_reach_ = current_min_dist_to_goal;
-        //     std::cout << "G2 é vazio" << std::endl;
-        // }
-    }
+        std::cout << "FOLLOW_CONTOUR" << std::endl;
     else if (current_state_ == LEAVE_CONTOUR)
-    {
-        if (distance_to_goal < d_reach_)
-        {
-            stopRobot();
-            std::cout << "Pressione qualquer tecla para voltar ao motion-to-goal..." << std::endl;
-            std::cin.get(); // Espera por uma entrada do usuário
-            current_state_ = MOVE_TO_GOAL;
-            d_reach_point_ = point_goal_;
-            // d_reach_ = distance_to_goal;
-            std::cout << "Voltando para motion-to-goal" << std::endl;
-        }
-    }
+        std::cout << "LEAVE_CONTOUR" << std::endl;
+    else if (current_state_ == EMERGENCY_STOP)
+        std::cout << "EMERGENCY_STOP" << std::endl;
+    else
+        std::cout << "UNKNOWN" << std::endl;
+
+    ros::Duration(0.0001).sleep();
+    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#00FFFF", 1); // Atualiza o marcador do ponto de alcance no Gazebo
+    moveToPoint(d_reach_point_.x, d_reach_point_.y);
+    return;
+    // else if (current_state_ == FOLLOW_CONTOUR)
+    // {
+    //     const std::vector<std::vector<geometry_msgs::Point>> g2 =
+    //         if (current_min_dist_to_goal < d_reach_ && !found_intersection)
+    //     {
+    //         stopRobot();
+    //         std::cout << "Pressione qualquer tecla para deixar o contorno e ir para o objetivo..." << std::endl;
+    //         std::cin.get(); // Espera por uma entrada do usuário
+    //         std::cout << "G2 não é vazio" << std::endl;
+    //         d_reach_point_ = closest_point_to_goal;
+    //         current_state_ = LEAVE_CONTOUR;
+    //     }
+    //     else
+    //     {
+    //         std::cout << "Continuando a seguir o contorno" << std::endl;
+    //         d_reach_point_ = simplified_segments.size() > 0 ? simplified_segments[0][simplified_segments[0].size() - 1] : point_goal_; // Continua indo para o primeiro ponto do primeiro segmento
+    //         // d_reach_point_ = closest_point_to_goal;
+    //     }
+    //     d_reach_ = distance_to_goal < d_reach_ ? distance_to_goal : d_reach_;
+
+    //     // else
+    //     // {
+    //     //     d_reach_point_ = closest_point_to_goal;
+    //     //     d_reach_ = current_min_dist_to_goal;
+    //     //     std::cout << "G2 é vazio" << std::endl;
+    //     // }
+    // }
+    // else if (current_state_ == LEAVE_CONTOUR)
+    // {
+    //     if (distance_to_goal < d_reach_)
+    //     {
+    //         stopRobot();
+    //         std::cout << "Pressione qualquer tecla para voltar ao motion-to-goal..." << std::endl;
+    //         std::cin.get(); // Espera por uma entrada do usuário
+    //         current_state_ = MOVE_TO_GOAL;
+    //         d_reach_point_ = point_goal_;
+    //         // d_reach_ = distance_to_goal;
+    //         std::cout << "Voltando para motion-to-goal" << std::endl;
+    //     }
+    // }
 
     std::cout << "Indo para o estado: " << (current_state_ == MOVE_TO_GOAL ? "MOVE_TO_GOAL" : current_state_ == FOLLOW_CONTOUR ? "FOLLOW_CONTOUR"
                                                                                                                                : "LEAVE_CONTOUR")
               << std::endl;
     std::cout << "d_reach_: " << d_reach_ << std::endl;
     std::cout << "Distância ao objetivo: " << distance_to_goal << std::endl;
-    std::cout << "Distância mínima atual ao objetivo: " << current_min_dist_to_goal << std::endl;
-    std::cout << "Distância heurística ao objetivo via ponto de obstáculo mais próximo: " << heuristic_to_goal_via_closest_obstacle_point << std::endl;
     std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
     std::cout << "Ponto atual do robô: (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
 

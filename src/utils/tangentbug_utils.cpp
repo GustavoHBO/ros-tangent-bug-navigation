@@ -1,5 +1,7 @@
 #include "tangentbug_utils.h"
 
+#include <tf2/LinearMath/Transform.h>
+#include <sensor_msgs/LaserScan.h>
 #include <ros/ros.h>
 #include <gazebo_msgs/SpawnModel.h>
 #include <gazebo_msgs/DeleteModel.h>
@@ -23,6 +25,29 @@ namespace tangentbug_utils
     static std::deque<std::string> segment_history;           // Keeps insertion order
     static std::map<std::string, std::string> segment_colors; // Maps segment name -> color
 
+    inline bool isFinite(const geometry_msgs::Point &p)
+    {
+        return std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z);
+    }
+
+    inline geometry_msgs::Point sub(const geometry_msgs::Point &a, const geometry_msgs::Point &b)
+    {
+        geometry_msgs::Point r;
+        r.x = a.x - b.x;
+        r.y = a.y - b.y;
+        r.z = a.z - b.z;
+        return r;
+    }
+    inline double dot(const geometry_msgs::Point &a, const geometry_msgs::Point &b)
+    {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+    inline double dist2(const geometry_msgs::Point &a, const geometry_msgs::Point &b)
+    {
+        const double dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
+        return sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
     // Convert #RRGGBB hex string to "R G B 1" format (0-1 scale)
     std::string hexToRGBA(const std::string &hex)
     {
@@ -44,7 +69,6 @@ namespace tangentbug_utils
 
     void spawnSphereAt(double x, double y, double z, const std::string &color_hex, int max_spheres)
     {
-        return;
         ros::NodeHandle nh;
         ros::ServiceClient spawn_client = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_sdf_model");
         ros::ServiceClient delete_client = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
@@ -346,6 +370,94 @@ namespace tangentbug_utils
     }
 
     /**
+     * Build a graph according to your spec:
+     * - Iterate pts in order.
+     * - Start a run at A0. While dist(An, An+1) <= max_gap, extend the run.
+     * - When a break (> max_gap) or end is found:
+     *     * If run has one point: emit edge [A0, A0].
+     *     * Else: emit edge [A0, An].
+     * - Graph nodes contain ONLY endpoints that appear in emitted edges.
+     *
+     * Notes:
+     * - Non-finite points (NaN/Inf) break runs and are skipped.
+     * - Uses squared distances to avoid sqrt.
+     */
+    Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts, double max_gap)
+    {
+        Graph g;
+        const size_t n = pts.size();
+        if (n == 0)
+            return g;
+
+        // Map from original index -> node index in g.nodes (or -1 if not yet added)
+        std::vector<int> node_idx(n, -1);
+        g.nodes.reserve(n);
+        g.edges.reserve(n / 2);
+
+        const double gap2 = max_gap * max_gap;
+
+        auto ensure_node = [&](size_t i) -> int
+        {
+            int &m = node_idx[i];
+            if (m == -1)
+            {
+                m = static_cast<int>(g.nodes.size());
+                g.nodes.push_back(pts[i]);
+            }
+            return m;
+        };
+
+        size_t i = 0;
+        // Skip leading non-finite points
+        while (i < n && !isFinite(pts[i]))
+            ++i;
+
+        while (i < n)
+        {
+            // Start of run: A0
+            size_t start = i;
+            size_t last = i;
+
+            // Extend while next is finite and within gap from current last
+            size_t j = i + 1;
+            while (j < n)
+            {
+                if (!isFinite(pts[j]))
+                    break;
+                if (dist2(pts[last], pts[j]) > gap2)
+                    break;
+                last = j;
+                ++j;
+            }
+
+            // Emit edge: singleton if start==last, else [start,last]
+            if (start == last)
+            {
+                int u = ensure_node(start);
+                std::vector<Edge> edges;
+                edges.push_back(Edge{u, u, 0.0});
+                g.edges.push_back(edges); // single-point edge
+            }
+            else
+            {
+                int u = ensure_node(start);
+                int v = ensure_node(last);
+                std::vector<Edge> edges;
+                edges.push_back(Edge{u, v, dist2(pts[start], pts[last])});
+                g.edges.push_back(edges);
+            }
+
+            // Advance i:
+            // If we broke due to a non-finite or large gap at j, the next run starts at j (skipping non-finites).
+            i = j;
+            while (i < n && !isFinite(pts[i]))
+                ++i;
+        }
+
+        return g;
+    }
+
+    /**
      * @brief Intersects two line segments defined by points p1, p2 and q1, q2.
      *        Returns the intersection point if they intersect, otherwise returns
      *        a default Point with intersects set to false.
@@ -354,7 +466,7 @@ namespace tangentbug_utils
         const geometry_msgs::Point &p1, const geometry_msgs::Point &p2,
         const geometry_msgs::Point &q1, const geometry_msgs::Point &q2)
     {
-        IntersectionResult result;
+        IntersectionResult intersectionResult;
 
         double s1_x = p2.x - p1.x;
         double s1_y = p2.y - p1.y;
@@ -363,20 +475,20 @@ namespace tangentbug_utils
 
         double denom = (-s2_x * s1_y + s1_x * s2_y);
         if (fabs(denom) < 1e-6)
-            return result; // paralelo ou colinear
+            return intersectionResult; // paralelo ou colinear
 
         double s = (-s1_y * (p1.x - q1.x) + s1_x * (p1.y - q1.y)) / denom;
         double t = (s2_x * (p1.y - q1.y) - s2_y * (p1.x - q1.x)) / denom;
 
         if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
         {
-            result.point.x = p1.x + (t * s1_x);
-            result.point.y = p1.y + (t * s1_y);
-            result.point.z = 0.0; // opcional
-            result.intersects = true;
+            intersectionResult.point.x = p1.x + (t * s1_x);
+            intersectionResult.point.y = p1.y + (t * s1_y);
+            intersectionResult.point.z = 0.0; // opcional
+            intersectionResult.intersects = true;
         }
 
-        return result;
+        return intersectionResult;
     }
 
     /**
@@ -481,4 +593,127 @@ namespace tangentbug_utils
 
         ROS_INFO_STREAM("Deleted " << deleted_count << " spheres/segments from Gazebo.");
     }
+
+    // Constrói G1 (nós + arestas admissíveis x->V) a partir de LTG, usando a definição (V - x)·(T - x) > 0 e d(V,T) < d(x,T)
+    void buildG1(const geometry_msgs::Point &x,
+                 const geometry_msgs::Point &T,
+                 Graph &LTG, // Grafo LTG (nós + arestas)
+                 Graph &G1   // Grafo resultante (nós + arestas)
+    )
+    {
+        auto &ltg_nodes = LTG.nodes;
+
+        auto &V1_nodes = G1.nodes;
+        auto &G1_edges = G1.edges;
+        V1_nodes.clear();
+        G1_edges.clear();
+
+        V1_nodes.push_back(x); // garante {x} ∈ V1
+        const int idx_x = 0;
+        const geometry_msgs::Point Tx = sub(T, x);
+        const double dxT2 = dist2(x, T);
+
+        for (const auto &V : ltg_nodes)
+        {
+            geometry_msgs::Point Vx = sub(V, x);
+            const double dVT2 = dist2(V, T);
+            if (dot(Vx, Tx) > 0.0)
+            {
+                int idx_V = static_cast<int>(V1_nodes.size());
+                V1_nodes.push_back(V);
+                if (dVT2 < dxT2)
+                {
+                    std::vector<Edge> edges;
+                    edges.push_back(Edge{idx_x, idx_V, dist2(x, V)}); // aresta admissível x->V
+                    G1_edges.push_back(edges);                        // aresta admissível x->V
+                }
+            }
+        }
+
+        bool has_T = false;
+        for (const auto &E : LTG.edges)
+        {
+            for(const auto &e : E){
+                IntersectionResult result = intersectSegments(x, T, LTG.nodes[e.from], LTG.nodes[e.to]);
+                if(result.intersects){
+                    std::cout << "Interseção com LTG em: (" << result.point.x << ", " << result.point.y << ")" << std::endl;
+                    has_T = true;
+                }
+            }
+        }
+
+        
+        if (!has_T)
+        {
+            std::cout << "Adicionando aresta x->T pois não há interseção com LTG" << std::endl;
+            // Se não houver interseção com T, adicionar aresta x->T
+            int idx_T = static_cast<int>(V1_nodes.size());
+            V1_nodes.push_back(T);
+            G1_edges.push_back({Edge{idx_x, idx_T, dist2(x, T)}});
+        }
+    }
+
+    Edge findClosestEdgeToTarget(
+        const geometry_msgs::Point &T,
+        Graph &subgraphG1)
+    {
+        Edge best_edge;
+        double best_d2 = std::numeric_limits<double>::max();
+
+        for (std::vector<Edge> &edges : subgraphG1.edges)
+        {
+            Edge eVT;
+            for (Edge &e : edges)
+            {
+                const geometry_msgs::Point &V = subgraphG1.nodes[e.to];
+                e.cost = e.cost ? e.cost : dist2(subgraphG1.nodes[e.from], V);
+                double dVT2 = dist2(V, T);
+                eVT = {e.to, -1, dVT2, true};
+                if (e.cost + dVT2 < best_d2)
+                {
+                    best_d2 = e.cost + dVT2;
+                    best_edge = e;
+                }
+                std::cout << "From (" << subgraphG1.nodes[e.from].x << ", " << subgraphG1.nodes[e.from].y << ") to ("
+                          << V.x << ", " << V.y << "): cost=" << e.cost << ", dVT2=" << dVT2
+                          << ", total=" << (e.cost + dVT2) << std::endl;
+            }
+            if (!edges.empty())
+            {
+                edges.push_back(eVT);
+            }
+        }
+        return best_edge;
+    }
+
+    std::vector<geometry_msgs::Point> laserScanToPoints(
+        const sensor_msgs::LaserScan &scan,
+        const tf2::Transform &tf_laser_to_odom)
+    {
+        std::vector<geometry_msgs::Point> points;
+        points.reserve(scan.ranges.size());
+
+        double angle = scan.angle_min;
+        for (size_t i = 0; i < scan.ranges.size(); i++, angle += scan.angle_increment)
+        {
+            float r = scan.ranges[i];
+            if (std::isfinite(r))
+            {
+                // point in laser frame
+                tf2::Vector3 v_laser(r * cos(angle), r * sin(angle), 0.0);
+
+                // transform to odom frame
+                tf2::Vector3 v_odom = tf_laser_to_odom * v_laser;
+
+                geometry_msgs::Point p;
+                p.x = v_odom.x();
+                p.y = v_odom.y();
+                p.z = v_odom.z();
+                p.z = 0.0; // keep points in 2D plane
+                points.push_back(p);
+            }
+        }
+        return points;
+    }
+
 }
