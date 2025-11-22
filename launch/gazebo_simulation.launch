@@ -51,7 +51,8 @@
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="false"/>
 
     <!-- Spawn do robô no Gazebo -->
-    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen" args="-param robot_description -urdf -model pioneer3at -x 0 -y 0 -z 0"/>
+    <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen" args="-param robot_description -urdf -model pioneer3at -x 0.839570 -y -2.079575 -z 0"/>
+    <!-- <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" output="screen" args="-param robot_description -urdf -model pioneer3at -x 0 -y -0 -z 0"/> -->
 
 
     <!-- ============================================= -->
@@ -82,7 +83,7 @@
 
     <node name="move_base" pkg="move_base" type="move_base" output="screen"/>
 
-    <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_static_tf" args="0.25 0 0.35 0 0 0 base_link sick_laser_link"/>
+    <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_static_tf" args="0.25 0 0.35 0 0 0 base_link sick_laser_link"/> -->
 
     <!-- ============================================= -->
     <!-- MODELOS ADICIONAIS NO GAZEBO (OPCIONAL) -->

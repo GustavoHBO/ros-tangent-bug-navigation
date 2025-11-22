@@ -61,6 +61,7 @@ TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh),
     // Initialize variables
     current_stable_best_segment_distance_ = std::numeric_limits<double>::max();
     d_reach_ = std::numeric_limits<double>::max();
+    dMin = std::numeric_limits<double>::max();
 
     // Initialize goal to NaN
     goal_x_ = std::numeric_limits<double>::quiet_NaN();
@@ -72,6 +73,13 @@ TangentBug::TangentBug(ros::NodeHandle &nh) : nh_(nh),
     ROS_INFO("TangentBug node initialized. Waiting for goal...");
     clearAllSpheresAndSegments();
     stopRobot(); // Garante que o robô comece parado
+    point_goal_.x = 4.0;
+    // point_goal_.x = 3.096439;
+    point_goal_.y = 0.0;
+    // point_goal_.y = -2.060737;
+    point_goal_.z = 0.0; // Define um objetivo inicial para testes
+    goal_x_ = point_goal_.x;
+    goal_y_ = point_goal_.y;
 }
 
 void TangentBug::scanCallback(const sensor_msgs::LaserScan::ConstPtr &msg)
@@ -150,10 +158,11 @@ void TangentBug::computeControl()
 
     if (robot_trajectory_history_.empty())
     {
+        current_state_ = FOLLOW_CONTOUR;
         // Marca a posição inicial do robô
         geometry_msgs::Point initial_position = current_pose_.position;
         robot_trajectory_history_.push_back(initial_position);
-        spawnSphereAt(initial_position.x, initial_position.y, 0.0, "#FFFFFF"); // Marca a posição inicial do robô no Gazebo
+        spawnSphereAt(initial_position.x, initial_position.y, 0.0, "#00FF00"); // Marca a posição inicial do robô no Gazebo
     }
 
     // const geometry_msgs::Point last_robot_position = robot_trajectory_history_.back();
@@ -175,7 +184,11 @@ void TangentBug::computeControl()
 
     double distance_to_goal = calculateDistance(robot_position.x, robot_position.y, goal_x_, goal_y_);
     ROS_INFO("Distância ao objetivo: %f", distance_to_goal);
-    spawnSphereAt(goal_x_, goal_y_, 0.0, "#FF0000"); // Atualiza o marcador do objetivo no Gazebo
+    spawnSphereAt(goal_x_, goal_y_, 0.0, "#0000FF"); // Atualiza o marcador do objetivo no Gazebo
+
+    // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+    // std::cin.get(); // Espera por uma entrada do usuário
+    // deleteAllSpheres();
 
     // Verifica se o robô já está no objetivo
     if (distance_to_goal < goal_tolerance_)
@@ -204,6 +217,9 @@ void TangentBug::computeControl()
                                                [](float range)
                                                { return !std::isnan(range) && range > 0.0 && std::isfinite(range); });
     std::cout << "Número de leituras válidas do LIDAR: " << num_ranges_valid << std::endl;
+
+    // current_state_ = MOVE_TO_GOAL;
+    // current_state_ = FOLLOW_CONTOUR;
 
     std::cout << "Estado atual: ";
     if (current_state_ == MOVE_TO_GOAL)
@@ -238,25 +254,95 @@ void TangentBug::computeControl()
         Graph subgraphG1; // Grafo completo do LIDAR
 
         auto odom_points = laserScanToPoints(scan, tf_laser_to_odom);
+
+        for (const auto &pt : odom_points)
+        {
+            // spawnSphereAt(pt.x, pt.y, 0.0, "#000000", odom_points.size()); // Marca os pontos do LIDAR no Gazebo
+        }
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        // deleteAllSpheres();
+
         // Simplifica os segmentos de obstáculos.
-        Graph g = makeGraphRunsByGap(odom_points, gap_threshold_);
-        g.nodes.push_back(robot_position); // Adiciona a posição atual do robô como um nó do grafo
+        odom_points = offsetPolylineTowardSensor(
+            odom_points,
+            robot_position,
+            robot_width_); // Offset negativo para aproximar os pontos do robô
+        std::cout << "Pontos odom_points " << odom_points.size() << std::endl;
+
+        // auto previous_point = odom_points.front();
+        // for (const auto &pt : odom_points)
+        // {
+        //     std::cout << "Ponto ajustado: (" << pt.x << ", " << pt.y << ")" << std::endl;
+        //     std::cout << "Ponto anterior: (" << previous_point.x << ", " << previous_point.y << ")" << std::endl;
+        //     std::cout << "Distancia entre pontos: " << calculateDistance(previous_point.x, previous_point.y, pt.x, pt.y) << std::endl;
+        //     spawnSphereAt(pt.x, pt.y, 0.0, "#00FFFF", odom_points.size()); // Marca os pontos do LIDAR ajustados no Gazebo
+        //     previous_point = pt;
+        // }
+
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        deleteAllSpheres();
+
+        Graph LTG = makeGraphRunsByGap(odom_points, 2.0, 5.0);
+        // const auto nodes = offsetPolylineTowardSensor(
+        //     LTG.nodes,
+        //     robot_position,
+        //     safety_margin_ + robot_width_ / 2.0);
+
+        // std::cout << "Pontos do LTG ajustado:" << std::endl;
+        // std::cout << "Total de pontos ajustados: " << nodes.size() << std::endl;
+        // std::cout << "Total de pontos originais: " << LTG.nodes.size() << std::endl;
+        // for (size_t i = 0; i < nodes.size(); i++)
+        // {
+        //     const auto &node = nodes[i];
+        //     auto &original_node = LTG.nodes[i];
+        //     original_node.x = node.x;
+        //     original_node.y = node.y;
+        //     original_node.z = node.z;
+        // }
+
+        // for (const auto &node : nodes)
+        // {
+        //     spawnSphereAt(node.x, node.y, 0.0, "#FFA500", nodes.size()); // Marca os pontos do LTG ajustado no Gazebo
+        // }
+
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        // deleteAllSpheres();
+
+        LTG.nodes.push_back(robot_position); // Adiciona a posição atual do robô como um nó do grafo
         // Exibindo a quantidade de pontos e arestas do LTG
-        std::cout << "LTG tem " << g.nodes.size() << " pontos e " << g.edges.size() << " arestas." << std::endl;
-        for(const auto &node : g.nodes) {
+        std::cout << "LTG tem " << LTG.nodes.size() << " pontos e " << LTG.edges.size() << " arestas." << std::endl;
+        for (const auto &node : LTG.nodes)
+        {
             std::cout << " - (" << node.x << ", " << node.y << ", " << node.z << ")" << std::endl;
+            spawnSphereAt(node.x, node.y, 0.0, "#ff0000", 100); // Marca os pontos do LTG no Gazebo
         }
 
-        for(const auto &edges : g.edges) {
-            for(const auto &edge : edges) {
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        // deleteAllSpheres();
+
+        for (const auto &edges : LTG.edges)
+        {
+            for (const Edge &edge : edges)
+            {
                 std::cout << " - from: " << edge.from << " to: " << edge.to << " cost: " << edge.cost << std::endl;
+                geometry_msgs::Point edge_from = LTG.nodes[edge.from];
+                geometry_msgs::Point edge_to = LTG.nodes[edge.to];
+                // spawnLineSegment(edge_from.x, edge_from.y, 0.0, edge_to.x, edge_to.y, 0.0,
+                //                  "#ff0000", 100);
             }
             std::cout << "----" << std::endl;
         }
 
+        std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        clearAllSpheresAndSegments();
         // subgraphG1.nodes são todos vertices visíveis do LTG que estão mais próximos do objetivo comparados com o ponto atual do robô.
         // subgraphG1.edges são as arestas do grafo (índices em subgraphG1.nodes) que satisfazem (V - x)·(T - x) > 0 e d(V,T) < d(x,T)
-        buildG1(robot_position, point_goal_, g, subgraphG1);
+        buildG1(robot_position, point_goal_, LTG, subgraphG1);
 
         // Exibindo a quantidade de pontos e arestas do G1
         std::cout << "subgraphG1 tem " << subgraphG1.nodes.size() << " pontos e " << subgraphG1.edges.size() << " arestas." << std::endl;
@@ -268,8 +354,12 @@ void TangentBug::computeControl()
             {
                 edge_count++;
                 std::cout << " - from: " << edge.from << " to: " << edge.to << " cost: " << edge.cost << std::endl;
+                // spawnSphereAt(subgraphG1.nodes[edge.from].x, subgraphG1.nodes[edge.from].y, 0.0, "#0000FF", 10); // Marca os pontos do subgraphG1 no Gazebo
+                // spawnSphereAt(subgraphG1.nodes[edge.to].x, subgraphG1.nodes[edge.to].y, 0.0, "#0000FF", 10);     // Marca os pontos do subgraphG1 no Gazebo
             }
         }
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
         std::cout << "Total de arestas em subgraphG1: " << edge_count << std::endl;
 
         // Exibindo pontos do subgraphG1
@@ -279,6 +369,9 @@ void TangentBug::computeControl()
             spawnSphereAt(point.x, point.y, 0.0, "#00FF00", subgraphG1.nodes.size()); // Marca os pontos do subgraphG1 no Gazebo
             std::cout << " - (" << point.x << ", " << point.y << ", " << point.z << ")" << std::endl;
         }
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        // clearAllSpheresAndSegments();
 
         // Exibindo arestas do subgraphG1
         std::cout << "Arestas do subgraphG1:" << std::endl;
@@ -296,15 +389,28 @@ void TangentBug::computeControl()
                 std::cout << " - From (" << from.x << ", " << from.y << ", " << from.z << ") to ("
                           << to.x << ", " << to.y << ", " << to.z << ")" << " cost: " << edge.cost << std::endl;
                 spawnLineSegment(from.x, from.y, 0.0, to.x, to.y, 0.0,
-                                 "#00FFFF", edges.size()); // Marca as arestas do G1 no Gazebo
+                                 "#00FF00", 10); // Marca as arestas do G1 no Gazebo
+                spawnLineSegment(to.x, to.y, 0.0, point_goal_.x, point_goal_.y, 0.0,
+                                 "#AA00FF", 10); // Marca as arestas do G1 no Gazebo
+
+                // spawnLineSegment(from.x, from.y, 0.0, point_goal_.x, point_goal_.y, 0.0,
+                //  "#ff0000", edges.size()); // Marca as arestas do G1 no Gazebo
+                // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+                // std::cin.get(); // Espera por uma entrada do usuário
+                // clearAllSpheresAndSegments();
             }
         }
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+        // clearAllSpheresAndSegments();
 
         geometry_msgs::Point node = subgraphG1.nodes.back();
-        bool gotoFollowContour = true;
-        for(const auto &node : subgraphG1.nodes) {
+        bool gotoFollowContour = !!subgraphG1.nodes.empty();
+        for (const auto &node : subgraphG1.nodes)
+        {
             const double to_goal = calculateDistance(node.x, node.y, goal_x_, goal_y_);
-            if(to_goal < distance_to_goal) {
+            if (to_goal < distance_to_goal)
+            {
                 gotoFollowContour = false;
                 break;
             }
@@ -313,23 +419,241 @@ void TangentBug::computeControl()
         // Se G1_edges estiver vazio, significa que não há arestas válidas para seguir, então estamos no mínimo local.
         if (gotoFollowContour)
         {
-            stopRobot();
-            std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
-            std::cin.get(); // Espera por uma entrada do usuário
             current_state_ = FOLLOW_CONTOUR;
             std::cout << "Vamos ter que seguir a borda" << std::endl;
+            dMin = distance_to_goal; // Atualiza dMin
             // d_reach_point_ = intersection_segment[0]; // Inicializa com o primeiro ponto do primeiro segmento
             // ultimo ponto do segmento
             // d_reach_point_ = simplified_segments[0][simplified_segments[0].size() - 1];
+            stopRobot();
+            std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
+            std::cin.get(); // Espera por uma entrada do usuário
+            return;
         }
         else
         {
             std::cout << "Continuamos no estado MOVE_TO_GOAL" << std::endl;
             // Escolhe o ponto em G1 que está mais próximo do objetivo
-            Edge closest_edge = findClosestEdgeToTarget(point_goal_, subgraphG1);
-            d_reach_point_ = subgraphG1.nodes[closest_edge.to];
-            std::cout << "Ponto de alcance atualizado para: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
+            Edge closest_edge;
+            if (subgraphG1.edges.empty())
+            {
+                d_reach_point_ = point_goal_;
+                stopRobot();
+                std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
+                std::cin.get(); // Espera por uma entrada do usuário
+            }
+            else if (direction_ == 0)
+            {
+                closest_edge = findClosestEdgeToTarget(point_goal_, subgraphG1);
+
+                // for (int i = 0; i < subgraphG1.nodes.size(); i++)
+                // {
+                //     const geometry_msgs::Point node = subgraphG1.nodes[i];
+                //     const double robot_to_node = calculateDistance(robot_position.x, robot_position.y, node.x, node.y);
+                //     if (robot_to_node < robot_width_ + safety_margin_)
+                //     {
+                //         current_state_ = FOLLOW_CONTOUR;
+                //         std::cout << "Vamos ter que seguir a borda" << std::endl;
+                //         dMin = distance_to_goal; // Atualiza dMin
+                //         stopRobot();
+                //         std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
+                //         std::cin.get(); // Espera por uma entrada do usuário
+                //         return;
+                //     }
+                // }
+
+                // std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
+                // std::cin.get(); // Espera por uma entrada do usuário
+                const int N_edges = subgraphG1.edges.size();
+                std::cout << "Quantidade de listas de arestas em subgraphG1: " << N_edges << std::endl;
+                closest_edge = subgraphG1.edges[N_edges - 1][0]; // Pega a primeira aresta que sai do nó mais próximo do objetivo
+                // Verificar se d_reach_point_ é válido e se a distância entre d_reach_point_ e o objetivo diminuiu
+                d_reach_point_ = subgraphG1.nodes[closest_edge.to];
+                spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#FFFF00", 1); // Marca o ponto de alcance no Gazebo
+                // std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
+                // std::cin.get(); // Espera por uma entrada do usuário
+                std::cout << "Ponto de alcance atualizado para: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
+                const double dist_robot_to_d_reach = calculateDistance(robot_position.x, robot_position.y, d_reach_point_.x, d_reach_point_.y);
+                std::cout << "Distância do robô até o ponto de alcance: " << dist_robot_to_d_reach << std::endl;
+            }
+            else
+            {
+                d_reach_point_ = subgraphG1.nodes[1];
+            }
         }
+    }
+    else if (current_state_ == FOLLOW_CONTOUR)
+    {
+        dMin = dMin > distance_to_goal ? distance_to_goal : dMin; // Atualiza dMin
+
+        geometry_msgs::TransformStamped tf_msg;
+        try
+        {
+            tf_msg = tf_buffer_.lookupTransform("odom", scan.header.frame_id,
+                                                scan.header.stamp, ros::Duration(0.05));
+        }
+        catch (tf2::TransformException &ex)
+        {
+            ROS_WARN("%s", ex.what());
+            return;
+        }
+
+        tf2::Transform tf_laser_to_odom;
+        tf2::fromMsg(tf_msg.transform, tf_laser_to_odom);
+
+        Graph subgraphG2; // Grafo completo do LIDAR
+
+        auto odom_points = laserScanToPoints(scan, tf_laser_to_odom);
+        odom_points = offsetPolylineTowardSensor(
+            odom_points,
+            robot_position,
+            robot_width_ + safety_margin_); // Offset negativo para aproximar os pontos do robô
+        // Simplifica os segmentos de obstáculos.
+        Graph g = makeGraphRunsByGap(odom_points, 2.0, 5.0);
+        if (g.nodes.empty())
+        {
+            std::cout << "Grafo g está vazio, parando o robô" << std::endl;
+            stopRobot();
+            std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            std::cin.get(); // Espera por uma entrada do usuário
+            current_state_ = MOVE_TO_GOAL;
+            return;
+        }
+        std::cout << "dMin atualizado para: " << dMin << std::endl;
+        buildG2(g, dMin, point_goal_, subgraphG2);
+        std::cout << "Quantidade de pontos em subgraphG2: " << subgraphG2.nodes.size() << std::endl;
+        for (const auto &node : subgraphG2.nodes)
+        {
+            spawnSphereAt(node.x, node.y, 0.0, "#FF00FF", subgraphG2.nodes.size()); // Marca os pontos do G2 no Gazebo
+        }
+        // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+        // std::cin.get(); // Espera por uma entrada do usuário
+
+        if (subgraphG2.nodes.empty())
+        {
+            std::cout << "subgraphG2 está vazio, parando o robô" << std::endl;
+            // stopRobot();
+            // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            // std::cin.get(); // Espera por uma entrada do usuário
+            // return;
+            // Edge closest_edge = findClosestEdgeToTarget(point_goal_, g);
+            d_reach_point_ = g.nodes[g.nodes.size() - 1]; // Último ponto do segmento
+            // d_reach_point_ = g.nodes[closest_edge.to];
+        }
+        else
+        {
+            std::cout << "subgraphG2 tem " << subgraphG2.nodes.size() << " pontos e " << subgraphG2.edges.size() << " arestas." << std::endl;
+            // Escolhe o ponto em G2 que está mais próximo do objetivo
+            Edge closest_edge = findClosestEdgeToTarget(point_goal_, subgraphG2);
+            std::cout << "closest_edge from: " << closest_edge.from << " to: " << closest_edge.to << " cost: " << closest_edge.cost << std::endl;
+            const int N_edges = subgraphG2.edges.size();
+            std::cout << "Quantidade de listas de arestas em subgraphG2: " << N_edges << std::endl;
+            closest_edge = subgraphG2.edges[N_edges - 1][0]; // Pega a primeira aresta que sai do nó mais próximo do objetivo
+            const auto before_point = d_reach_point_;
+            auto after_point = subgraphG2.nodes[closest_edge.from];
+            after_point = g.nodes[g.nodes.size() - 1]; // Último ponto do segmento
+            // verifica se x pontos atrás possuem angulo pequeno ou próximo de 0 com o segmento atual
+            // double angle = 0.0;
+            // const int pontos_analise = 20;
+            // for (int i = 1; i <= pontos_analise && i < robot_trajectory_history_.size(); i++)
+            // {
+            //     const auto &past_point = robot_trajectory_history_[robot_trajectory_history_.size() - i];
+            //     angle += angleBetweenPoints(robot_position, before_point, after_point);
+            // }
+
+            // if (angle <= 0.03 && robot_trajectory_history_.size() >= pontos_analise)
+            // {
+            //     std::cout << "Ângulo muito pequeno, parando o robô para reavaliar..." << std::endl;
+            //     stopRobot();
+            //     std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            //     std::cin.get(); // Espera por uma entrada do usuário
+            // }
+
+            // const double angle = angleBetweenPoints(robot_position, before_point, after_point);
+            // std::cout << "Angulo entre os segmentos: "
+            //           << angle << " radianos." << std::endl;
+            // std::cout << "Ponto de alcance atualizado para: (" << after_point.x << ", " << after_point.y << ")" << std::endl;
+            // if (angle <= 0.03)
+            // {
+            //     std::cout << "Ângulo muito pequeno, parando o robô para reavaliar..." << std::endl;
+            //     // stopRobot();
+            //     // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            //     // std::cin.get(); // Espera por uma entrada do usuário
+            // }
+
+            // for (int i = 0; i < g.nodes.size(); i++)
+            // {
+            //     const geometry_msgs::Point node = g.nodes[i];
+            //     const double robot_to_node = calculateDistance(robot_position.x, robot_position.y, node.x, node.y);
+            //     if (robot_to_node < robot_width_ + safety_margin_)
+            //     {
+            //         current_state_ = LEAVE_CONTOUR;
+            //         std::cout << "Vamos ter que parar de seguir a borda" << std::endl;
+            //         dMin = dMin > distance_to_goal ? distance_to_goal : dMin; // Atualiza dMin
+
+            //         stopRobot();
+            //         std::cout << "Pressione qualquer tecla para seguir a borda..." << std::endl;
+            //         std::cin.get(); // Espera por uma entrada do usuário
+            //     }
+            // }
+
+            d_reach_point_ = after_point;
+            std::cout << "Ponto de alcance atualizado para: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
+            // stopRobot();
+            // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            // std::cin.get(); // Espera por uma entrada do usuário
+            clearAllSpheresAndSegments();
+        }
+    }
+    else if (current_state_ == LEAVE_CONTOUR)
+    {
+        if (distance_to_goal <= dMin)
+        {
+            stopRobot();
+            std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            std::cin.get(); // Espera por uma entrada do usuário
+
+            geometry_msgs::TransformStamped tf_msg;
+            try
+            {
+                tf_msg = tf_buffer_.lookupTransform("odom", scan.header.frame_id,
+                                                    scan.header.stamp, ros::Duration(0.05));
+            }
+            catch (tf2::TransformException &ex)
+            {
+                ROS_WARN("%s", ex.what());
+                return;
+            }
+
+            tf2::Transform tf_laser_to_odom;
+            tf2::fromMsg(tf_msg.transform, tf_laser_to_odom);
+
+            Graph subgraphG1; // Grafo completo do LIDAR
+
+            auto odom_points = laserScanToPoints(scan, tf_laser_to_odom);
+            Graph g = makeGraphRunsByGap(odom_points, gap_threshold_, 5.0);
+
+            stopRobot();
+
+            for (const auto &pt : g.nodes)
+            {
+                spawnSphereAt(pt.x, pt.y, 0.0, "#000000", g.nodes.size()); // Marca os pontos do LIDAR no Gazebo
+            }
+
+            // for (const auto &pt : odom_points)
+            // {
+            //     spawnSphereAt(pt.x, pt.y, 0.0, "#000000", odom_points.size()); // Marca os pontos do LIDAR no Gazebo
+            // }
+            stopRobot();
+            std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+            std::cin.get(); // Espera por uma entrada do usuário
+            deleteAllSpheres();
+
+            // Simplifica os segmentos de obstáculos.
+            Graph LTG = makeGraphRunsByGap(odom_points, gap_threshold_, 30.0);
+            LTG.nodes.push_back(robot_position); // Adiciona a posição atual do robô como um nó do grafo
+        }
+        return;
     }
     std::cout << "Indo para o estado: ";
     if (current_state_ == MOVE_TO_GOAL)
@@ -343,8 +667,18 @@ void TangentBug::computeControl()
     else
         std::cout << "UNKNOWN" << std::endl;
 
+    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#FFFFFF", 1); // Atualiza o marcador do ponto de alcance no Gazebo
     ros::Duration(0.0001).sleep();
-    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#00FFFF", 1); // Atualiza o marcador do ponto de alcance no Gazebo
+    // stopRobot();
+    // std::cout << "Pressione qualquer tecla para continuar..." << std::endl;
+    // std::cin.get(); // Espera por uma entrada do usuário
+    const auto last_robot_position = robot_trajectory_history_.back();
+    if (calculateDistance(last_robot_position.x, last_robot_position.y, d_reach_point_.x, d_reach_point_.y) > 0.1 || robot_trajectory_history_.size() == 1)
+    {
+        // Adiciona a nova posição do robô ao histórico
+        robot_trajectory_history_.push_back(d_reach_point_);
+        spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#FFFFFE"); // Marca a nova posição do robô no Gazebo
+    }
     moveToPoint(d_reach_point_.x, d_reach_point_.y);
     return;
     // else if (current_state_ == FOLLOW_CONTOUR)
@@ -396,7 +730,7 @@ void TangentBug::computeControl()
     std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
     std::cout << "Ponto atual do robô: (" << robot_position.x << ", " << robot_position.y << ")" << std::endl;
 
-    spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#FFFF00", 1); // Atualiza o marcador do ponto de alcance no Gazebo
+    // spawnSphereAt(d_reach_point_.x, d_reach_point_.y, 0.0, "#FFFF00", 1); // Atualiza o marcador do ponto de alcance no Gazebo
 
     std::cout << "Indo para o ponto de alcance: (" << d_reach_point_.x << ", " << d_reach_point_.y << ")" << std::endl;
     moveToPoint(d_reach_point_.x, d_reach_point_.y);
@@ -631,223 +965,6 @@ void TangentBug::moveToPoint(double x, double y)
 
     ROS_DEBUG("moveToPoint(simul): dist=%.2f, ang_err=%.2f, cmd(v=%.2f,w=%.2f)",
               distance, angle_error, cmd.linear.x, cmd.angular.z);
-}
-
-static inline void normalize(double &x, double &y)
-{
-    const double n = std::hypot(x, y);
-    if (n > 1e-12)
-    {
-        x /= n;
-        y /= n;
-    }
-    else
-    {
-        x = 1.0;
-        y = 0.0;
-    }
-}
-
-static inline bool lineIntersection(double x1, double y1, double dx1, double dy1,
-                                    double x2, double y2, double dx2, double dy2,
-                                    double &xi, double &yi)
-{
-    // (x1,y1) + t*(dx1,dy1)  intersects  (x2,y2) + s*(dx2,dy2)
-    const double denom = dx1 * dy2 - dy1 * dx2; // cross((dx1,dy1),(dx2,dy2))
-    if (std::fabs(denom) < 1e-12)
-        return false; // paralelas/quase
-    const double rx = x2 - x1, ry = y2 - y1;
-    const double t = (rx * dy2 - ry * dx2) / denom;
-    xi = x1 + t * dx1;
-    yi = y1 + t * dy1;
-    return true;
-}
-
-/**
- * Offset (inflar) uma polilinha no SENTIDO DO SENSOR.
- * - Cada aresta é deslocada paralelamente pela normal que aponta para o sensor.
- * - Nos vértices, unimos por interseção das duas arestas deslocadas (bevel/miter simples).
- * - Se não houver interseção (quase paralelas), fazemos bevel: usamos o fim de uma e início da outra.
- *
- * @param seg            Polilinha em frame global (pontos crus do obstáculo).
- * @param sensor_global  Posição do sensor no mesmo frame.
- * @param d              Distância de inflação (ex.: raio do robô + margem).
- * @param closed         true para polígono fechado; false para aberto (LIDAR típico).
- */
-static inline std::vector<geometry_msgs::Point>
-offsetPolylineTowardSensor(const std::vector<geometry_msgs::Point> &seg,
-                           const geometry_msgs::Point &sensor_global,
-                           double d,
-                           bool closed = false)
-{
-    std::vector<geometry_msgs::Point> out;
-    const size_t N = seg.size();
-    if (N == 0)
-        return out;
-    if (N == 1)
-    {
-        std::cout << "offsetPolylineTowardSensor: single point, creating radial offset." << std::endl;
-        // ponto isolado: desloca radialmente PARA o sensor (ponto navegável seguro)
-        geometry_msgs::Point p = seg[0];
-        double vx = sensor_global.x - p.x;
-        double vy = sensor_global.y - p.y;
-        normalize(vx, vy); // vetor do ponto para o sensor
-        geometry_msgs::Point q;
-        q.x = p.x + d * vx;
-        q.y = p.y + d * vy;
-        q.z = 0.0;
-        out.push_back(q);
-        return out;
-    }
-
-    // Para cada aresta i: [Pi -> P(i+1)]
-    const size_t M = closed ? N : (N - 1);
-
-    // Pré-calcula tangentes e normais (para o sensor) e endpoints deslocados
-    struct SegOff
-    {
-        double ax, ay, bx, by;
-        double tx, ty;
-    }; // offset endpoints + direção
-    std::vector<SegOff> off;
-    off.reserve(M);
-
-    for (size_t i = 0; i < M; ++i)
-    {
-        const size_t i0 = i;
-        const size_t i1 = (i + 1) % N;
-        const auto &A = seg[i0];
-        const auto &B = seg[i1];
-
-        // tangente do segmento
-        double tx = B.x - A.x;
-        double ty = B.y - A.y;
-        normalize(tx, ty);
-
-        // normal candidata (rot90 da tangente)
-        double nx = -ty, ny = tx;
-
-        // decidir sentido PARA O SENSOR:
-        // use o ponto médio para definir v = (sensor - mid); dot(n, v) > 0 => n aponta para o sensor
-        const double mx = 0.5 * (A.x + B.x);
-        const double my = 0.5 * (A.y + B.y);
-        const double vx = sensor_global.x - mx;
-        const double vy = sensor_global.y - my;
-        if (nx * vx + ny * vy < 0.0)
-        {
-            nx = -nx;
-            ny = -ny;
-        } // garante n -> sensor
-
-        // desloca endpoints da aresta
-        SegOff s;
-        s.tx = tx;
-        s.ty = ty;
-        s.ax = A.x + d * nx;
-        s.ay = A.y + d * ny;
-        s.by = B.y + d * ny;
-        s.bx = B.x + d * nx;
-        off.push_back(s);
-    }
-
-    // Construir vértices de saída
-    out.reserve(N + (closed ? 0 : 1));
-
-    if (!closed)
-    {
-        // endpoint inicial: apenas A0'
-        geometry_msgs::Point q0;
-        q0.x = off[0].ax;
-        q0.y = off[0].ay;
-        q0.z = 0.0;
-        out.push_back(q0);
-    }
-
-    // vértices internos: interseção das retas deslocadas adjacentes
-    for (size_t i = 0; i < (closed ? N : (N - 2)); ++i)
-    {
-        // no caso aberto, o vértice i+1 da polilinha original é “interno”
-        const size_t k = closed ? i : (i + 1);
-
-        const size_t segL = (k + M - 1) % M; // aresta à esquerda (anterior)
-        const size_t segR = k % M;           // aresta à direita (próxima)
-
-        // reta L: passa por (aL -> bL), direção tL
-        const SegOff &L = off[segL];
-        // reta R: passa por (aR -> bR), direção tR
-        const SegOff &R = off[segR];
-
-        double xi, yi;
-        bool ok = lineIntersection(L.ax, L.ay, L.tx, L.ty,
-                                   R.ax, R.ay, R.tx, R.ty,
-                                   xi, yi);
-
-        geometry_msgs::Point q;
-        if (ok)
-        {
-            q.x = xi;
-            q.y = yi;
-            q.z = 0.0;
-        }
-        else
-        {
-            // quase paralelas: bevel simples usando “fim de L” e “início de R”
-            // aqui escolhemos o ponto médio entre L.b e R.a para evitar gaps/overlaps
-            q.x = 0.5 * (L.bx + R.ax);
-            q.y = 0.5 * (L.by + R.ay);
-            q.z = 0.0;
-        }
-        out.push_back(q);
-    }
-
-    if (!closed)
-    {
-        // endpoint final: apenas B_last'
-        const SegOff &last = off.back();
-        geometry_msgs::Point qN;
-        qN.x = last.bx;
-        qN.y = last.by;
-        qN.z = 0.0;
-        out.push_back(qN);
-    }
-    else
-    {
-        // fechado: também fecha o polígono; já adicionamos N vértices internos,
-        // então não precisa repetir o primeiro.
-    }
-
-    if (!closed && out.size() >= 2)
-    {
-        // primeira ponta: move no sentido oposto à aresta (out[0] -> out[1])
-        {
-            double dx = out[1].x - out[0].x;
-            double dy = out[1].y - out[0].y;
-            const double n = std::hypot(dx, dy);
-            if (n > 1e-8)
-            {
-                dx /= n;
-                dy /= n;
-                out[0].x -= d * dx;
-                out[0].y -= d * dy;
-            }
-        }
-        // última ponta: move no mesmo sentido da aresta (out[n-2] -> out[n-1])
-        {
-            const size_t npts = out.size();
-            double dx = out[npts - 1].x - out[npts - 2].x;
-            double dy = out[npts - 1].y - out[npts - 2].y;
-            const double n = std::hypot(dx, dy);
-            if (n > 1e-8)
-            {
-                dx /= n;
-                dy /= n;
-                out[npts - 1].x += d * dx;
-                out[npts - 1].y += d * dy;
-            }
-        }
-    }
-
-    return out;
 }
 
 /**

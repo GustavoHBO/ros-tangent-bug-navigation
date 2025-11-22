@@ -106,7 +106,9 @@ public:
     // Se não houver bloqueio nessa linha reta, d_reach_ é simplesmente a distância
     // direta do robô ao objetivo.
     double d_reach_;
+    double dMin;
     geometry_msgs::Point d_reach_point_; // Ponto do obstáculo mais próximo do objetivo
+    int direction_ = 0;                  // Direção do contorno: 1 para horário, -1 para anti-horário
 
     // Distância em centímetros. Atualizado a cada leitura do LIDAR.
     // Representa a distância heurística usada para decidir a estratégia de movimento.
@@ -127,8 +129,8 @@ public:
     double gap_segment_distance_threshold_ = 0.4; // Distância em centímetros. Utilizado para detectar segmentos de obstáculos.
     double gap_segment_angle_threshold_ = 10;     // Ângulo em graus. Utilizado para detectar segmentos de obstáculos.
 
-    std::vector<geometry_msgs::Point> robot_trajectory_history_;      // Histórico da trajetória do robô
-    std::vector<std::vector<geometry_msgs::Point>> obstacle_history_; // Histórico dos obstáculos detectados
+    std::vector<geometry_msgs::Point> robot_trajectory_history_; // Histórico da trajetória do robô
+    std::vector<geometry_msgs::Point> obstacle_history_;         // Histórico dos obstáculos detectados
 
     // Estado do controlador
     State current_state_;

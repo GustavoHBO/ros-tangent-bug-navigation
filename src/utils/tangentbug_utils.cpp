@@ -48,6 +48,20 @@ namespace tangentbug_utils
         return sqrt(dx * dx + dy * dy + dz * dz);
     }
 
+    static inline void normalize(double &x, double &y)
+    {
+        const double n = std::hypot(x, y);
+        if (n > 1e-12)
+        {
+            x /= n;
+            y /= n;
+        }
+        else
+        {
+            x = 1.0;
+            y = 0.0;
+        }
+    }
     // Convert #RRGGBB hex string to "R G B 1" format (0-1 scale)
     std::string hexToRGBA(const std::string &hex)
     {
@@ -69,6 +83,7 @@ namespace tangentbug_utils
 
     void spawnSphereAt(double x, double y, double z, const std::string &color_hex, int max_spheres)
     {
+        return;
         ros::NodeHandle nh;
         ros::ServiceClient spawn_client = nh.serviceClient<gazebo_msgs::SpawnModel>("/gazebo/spawn_sdf_model");
         ros::ServiceClient delete_client = nh.serviceClient<gazebo_msgs::DeleteModel>("/gazebo/delete_model");
@@ -107,7 +122,6 @@ namespace tangentbug_utils
                 delete_srv.request.model_name = sphere_to_delete;
                 if (delete_client.call(delete_srv) && delete_srv.response.success)
                 {
-                    ROS_INFO_STREAM("Deleted sphere of color " << color_hex << ": " << sphere_to_delete);
                     sphere_colors.erase(sphere_to_delete);
                 }
                 else
@@ -133,7 +147,7 @@ namespace tangentbug_utils
             << "    <static>true</static>"
             << "    <link name='link'>"
             << "      <visual name='visual'>"
-            << "        <geometry><box><size>0.05 0.05 2.5</size></box></geometry>"
+            << "        <geometry><box><size>0.07 0.07 2.5</size></box></geometry>"
             << "        <material><ambient>" << color_rgba << "</ambient></material>"
             << "      </visual>"
             << "    </link>"
@@ -148,11 +162,7 @@ namespace tangentbug_utils
         srv.request.initial_pose.position.z = z;
         srv.request.initial_pose.orientation.w = 1.0;
 
-        if (spawn_client.call(srv) && srv.response.success)
-        {
-            ROS_INFO_STREAM("Spawned sphere at (" << x << ", " << y << ", " << z << ") with color " << color_hex);
-        }
-        else
+        if (!(spawn_client.call(srv) && srv.response.success))
         {
             ROS_ERROR_STREAM("Failed to spawn sphere: " << srv.response.status_message);
         }
@@ -261,7 +271,7 @@ namespace tangentbug_utils
             << "    <static>true</static>"
             << "    <link name='link'>"
             << "      <visual name='visual'>"
-            << "        <geometry><box><size>" << length << " 0.02 2.5</size></box></geometry>"
+            << "        <geometry><box><size>" << length << " 0.025 2.2</size></box></geometry>"
             << "        <material><ambient>" << color_rgba << "</ambient></material>"
             << "      </visual>"
             << "    </link>"
@@ -369,6 +379,44 @@ namespace tangentbug_utils
         return simplified;
     }
 
+    double angleBetweenPoints(const geometry_msgs::Point &p1,
+                              const geometry_msgs::Point &p2,
+                              const geometry_msgs::Point &p3)
+    {
+        // Vetor p1 -> p2
+        double u_x = p2.x - p1.x;
+        double u_y = p2.y - p1.y;
+
+        // Vetor p1 -> p3
+        double v_x = p3.x - p1.x;
+        double v_y = p3.y - p1.y;
+
+        // Produto escalar
+        double dot = u_x * v_x + u_y * v_y;
+
+        // Normas
+        double mag_u = std::sqrt(u_x * u_x + u_y * u_y);
+        double mag_v = std::sqrt(v_x * v_x + v_y * v_y);
+
+        // Evita divisão por zero
+        if (mag_u < 1e-9 || mag_v < 1e-9)
+        {
+            return 0.0; // ou lançar uma exceção, se preferir
+        }
+
+        // Cálculo do cosseno do ângulo
+        double cos_angle = dot / (mag_u * mag_v);
+
+        // Correções numéricas para manter dentro de [-1, 1]
+        if (cos_angle > 1.0)
+            cos_angle = 1.0;
+        if (cos_angle < -1.0)
+            cos_angle = -1.0;
+
+        // Ângulo final (radianos)
+        return std::acos(cos_angle);
+    }
+
     /**
      * Build a graph according to your spec:
      * - Iterate pts in order.
@@ -382,79 +430,432 @@ namespace tangentbug_utils
      * - Non-finite points (NaN/Inf) break runs and are skipped.
      * - Uses squared distances to avoid sqrt.
      */
-    Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts, double max_gap)
+    // Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts, double max_gap, double angle_threshold_deg)
+    // {
+    //     Graph g;
+    //     const size_t n = pts.size();
+    //     if (n == 0)
+    //         return g;
+
+    //     // Map from original index -> node index in g.nodes (or -1 if not yet added)
+    //     std::vector<int> node_idx(n, -1);
+    //     g.nodes.reserve(n);
+    //     g.edges.reserve(n / 2);
+
+    //     const double gap2 = max_gap * max_gap;
+
+    //     auto ensure_node = [&](size_t i) -> int
+    //     {
+    //         int &m = node_idx[i];
+    //         if (m == -1)
+    //         {
+    //             m = static_cast<int>(g.nodes.size());
+    //             g.nodes.push_back(pts[i]);
+    //         }
+    //         return m;
+    //     };
+
+    //     size_t i = 0;
+    //     // Skip leading non-finite points
+    //     while (i < n && !isFinite(pts[i]))
+    //         ++i;
+
+    //     while (i < n)
+    //     {
+    //         // Start of run: A0
+    //         size_t start = i;
+    //         size_t last = i;
+
+    //         // Extend while next is finite and within gap from current last
+    //         size_t j = i + 1;
+    //         while (j < n)
+    //         {
+    //             if (!isFinite(pts[j]))
+    //                 break;
+    //             if (dist2(pts[last], pts[j]) > gap2)
+    //                 break;
+    //             last = j;
+    //             ++j;
+    //         }
+
+    //         // Emit edge: singleton if start==last, else [start,last]
+    //         if (start == last)
+    //         {
+    //             int u = ensure_node(start);
+    //             std::vector<Edge> edges;
+    //             edges.push_back(Edge{u, u, 0.0});
+    //             g.edges.push_back(edges); // single-point edge
+    //         }
+    //         else
+    //         {
+    //             int u = ensure_node(start);
+    //             int v = ensure_node(last);
+    //             std::vector<Edge> edges;
+    //             edges.push_back(Edge{u, v, dist2(pts[start], pts[last])});
+    //             g.edges.push_back(edges);
+    //         }
+
+    //         // Advance i:
+    //         // If we broke due to a non-finite or large gap at j, the next run starts at j (skipping non-finites).
+    //         i = j;
+    //         while (i < n && !isFinite(pts[i]))
+    //             ++i;
+    //     }
+
+    //     return g;
+    // }
+
+    static inline double angle_abs_diff(double a, double b)
     {
-        Graph g;
-        const size_t n = pts.size();
-        if (n == 0)
-            return g;
+        double d = std::fmod(a - b, 2.0 * M_PI);
+        if (d < -M_PI)
+            d += 2.0 * M_PI;
+        else if (d > M_PI)
+            d -= 2.0 * M_PI;
+        return std::fabs(d);
+    }
 
-        // Map from original index -> node index in g.nodes (or -1 if not yet added)
-        std::vector<int> node_idx(n, -1);
-        g.nodes.reserve(n);
-        g.edges.reserve(n / 2);
+    // direção do segmento (ângulo em rad) usando atan2
+    static inline double segment_angle_rad(const geometry_msgs::Point &a,
+                                           const geometry_msgs::Point &b)
+    {
+        return std::atan2(b.y - a.y, b.x - a.x);
+    }
 
-        const double gap2 = max_gap * max_gap;
+    static inline bool lineIntersection(double x1, double y1, double dx1, double dy1,
+                                        double x2, double y2, double dx2, double dy2,
+                                        double &xi, double &yi)
+    {
+        // (x1,y1) + t*(dx1,dy1)  intersects  (x2,y2) + s*(dx2,dy2)
+        const double denom = dx1 * dy2 - dy1 * dx2; // cross((dx1,dy1),(dx2,dy2))
+        if (std::fabs(denom) < 1e-12)
+            return false; // paralelas/quase
+        const double rx = x2 - x1, ry = y2 - y1;
+        const double t = (rx * dy2 - ry * dx2) / denom;
+        xi = x1 + t * dx1;
+        yi = y1 + t * dy1;
+        return true;
+    }
 
-        auto ensure_node = [&](size_t i) -> int
+    Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts,
+                             double max_gap,
+                             double angle_threshold_deg)
+    {
+        Graph G;
+
+        const int n = static_cast<int>(pts.size());
+        if (n <= 0)
         {
-            int &m = node_idx[i];
-            if (m == -1)
-            {
-                m = static_cast<int>(g.nodes.size());
-                g.nodes.push_back(pts[i]);
-            }
-            return m;
-        };
-
-        size_t i = 0;
-        // Skip leading non-finite points
-        while (i < n && !isFinite(pts[i]))
-            ++i;
-
-        while (i < n)
+            G.edges.clear();
+            return G;
+        }
+        if (n < 2)
         {
-            // Start of run: A0
-            size_t start = i;
-            size_t last = i;
+            G.nodes.reserve(pts.size());
+            geometry_msgs::Point p = pts[0];
+            G.nodes.push_back(p);
+            G.edges.resize(1);
+            G.edges[0].push_back(Edge{0, 0, 0.0, false});
+            return G;
+        }
 
-            // Extend while next is finite and within gap from current last
-            size_t j = i + 1;
-            while (j < n)
+        const double angle_thr_rad = angle_threshold_deg * M_PI / 180.0;
+
+        // Guardar pares (start_idx, end_idx) dos runs válidos em relação ao vetor original
+        std::vector<std::pair<int, int>> runs;
+
+        int run_start = 0;       // índice do primeiro ponto do run (em pts)
+        int last_kept = 0;       // último ponto aceito no run (em pts)
+        bool in_run = false;     // já temos pelo menos um segmento no run?
+        double last_seg_ang = 0; // ângulo do último segmento aceito
+
+        run_start = 0;
+        last_kept = 0;
+        in_run = false;
+
+        for (int i = 1; i < n; ++i)
+        {
+            const double gap = dist2(pts[i - 1], pts[i]);
+
+            if (gap > max_gap)
             {
-                if (!isFinite(pts[j]))
-                    break;
-                if (dist2(pts[last], pts[j]) > gap2)
-                    break;
-                last = j;
-                ++j;
+                // quebra de run por distância
+                if (last_kept > run_start)
+                {
+                    runs.emplace_back(run_start, last_kept);
+                }
+                run_start = i;
+                last_kept = i;
+                in_run = false;
+                continue;
             }
 
-            // Emit edge: singleton if start==last, else [start,last]
-            if (start == last)
+            // gap OK => checar direção
+            const double ang = segment_angle_rad(pts[last_kept], pts[i]);
+
+            if (!in_run)
             {
-                int u = ensure_node(start);
-                std::vector<Edge> edges;
-                edges.push_back(Edge{u, u, 0.0});
-                g.edges.push_back(edges); // single-point edge
+                // primeiro segmento do run
+                last_seg_ang = ang;
+                last_kept = i;
+                in_run = true;
             }
             else
             {
-                int u = ensure_node(start);
-                int v = ensure_node(last);
-                std::vector<Edge> edges;
-                edges.push_back(Edge{u, v, dist2(pts[start], pts[last])});
-                g.edges.push_back(edges);
+                const double dang = angle_abs_diff(ang, last_seg_ang);
+                if (dang <= angle_thr_rad)
+                {
+                    // mantém o run
+                    last_seg_ang = ang;
+                    last_kept = i;
+                }
+                else
+                {
+                    // quebra de run por ângulo
+                    if (last_kept > run_start)
+                    {
+                        runs.emplace_back(run_start, last_kept);
+                    }
+                    // recomeça novo run em (i-1)->i
+                    run_start = i - 1;
+                    last_kept = i;
+                    last_seg_ang = segment_angle_rad(pts[run_start], pts[i]);
+                    in_run = true;
+                }
             }
-
-            // Advance i:
-            // If we broke due to a non-finite or large gap at j, the next run starts at j (skipping non-finites).
-            i = j;
-            while (i < n && !isFinite(pts[i]))
-                ++i;
         }
 
-        return g;
+        // fecha o último run, se válido
+        if (last_kept > run_start)
+        {
+            runs.emplace_back(run_start, last_kept);
+        }
+
+        // ---- Construção do grafo: só extremos como nós; cada run vira uma aresta ----
+
+        // Mapeia índice no vetor original -> índice no vetor G.nodes
+        std::vector<int> map_orig_to_node(n, -1);
+
+        auto add_node_if_needed = [&](int idx) -> int
+        {
+            if (map_orig_to_node[idx] != -1)
+                return map_orig_to_node[idx];
+            const int new_id = static_cast<int>(G.nodes.size());
+            G.nodes.push_back(pts[idx]);
+            map_orig_to_node[idx] = new_id;
+            // garante que edges tem tamanho suficiente
+            if (static_cast<int>(G.edges.size()) <= new_id)
+                G.edges.resize(new_id + 1);
+            return new_id;
+        };
+
+        for (const auto &run : runs)
+        {
+            const int i0 = run.first;
+            const int i1 = run.second;
+            if (i1 == i0)
+                continue;
+
+            const int u = add_node_if_needed(i0);
+            const int v = add_node_if_needed(i1);
+            const double w = dist2(pts[i0], pts[i1]);
+
+            // grafo não-direcionado: adiciona as duas direções
+            G.edges[u].push_back(Edge{u, v, w, false});
+            G.edges[v].push_back(Edge{v, u, w, false});
+        }
+
+        // garante consistência (pode não ser necessário, mas é seguro)
+        if (G.edges.size() < G.nodes.size())
+            G.edges.resize(G.nodes.size());
+
+        return G;
+    }
+
+    /**
+     * Offset (inflar) uma polilinha no SENTIDO DO SENSOR.
+     * - Cada aresta é deslocada paralelamente pela normal que aponta para o sensor.
+     * - Nos vértices, unimos por interseção das duas arestas deslocadas (bevel/miter simples).
+     * - Se não houver interseção (quase paralelas), fazemos bevel: usamos o fim de uma e início da outra.
+     *
+     * @param seg            Polilinha em frame global (pontos crus do obstáculo).
+     * @param sensor_global  Posição do sensor no mesmo frame.
+     * @param d              Distância de inflação (ex.: raio do robô + margem).
+     * @param closed         true para polígono fechado; false para aberto (LIDAR típico).
+     */
+    std::vector<geometry_msgs::Point> offsetPolylineTowardSensor(const std::vector<geometry_msgs::Point> &seg,
+                                                                 const geometry_msgs::Point &sensor_global,
+                                                                 double d,
+                                                                 bool closed)
+    {
+        std::vector<geometry_msgs::Point> out;
+        const size_t N = seg.size();
+        if (N == 0)
+            return out;
+        if (N == 1)
+        {
+            std::cout << "offsetPolylineTowardSensor: single point, creating radial offset." << std::endl;
+            // ponto isolado: desloca radialmente PARA o sensor (ponto navegável seguro)
+            geometry_msgs::Point p = seg[0];
+            double vx = sensor_global.x - p.x;
+            double vy = sensor_global.y - p.y;
+            normalize(vx, vy); // vetor do ponto para o sensor
+            geometry_msgs::Point q;
+            q.x = p.x + d * vx;
+            q.y = p.y + d * vy;
+            q.z = 0.0;
+            out.push_back(q);
+            return out;
+        }
+
+        // Para cada aresta i: [Pi -> P(i+1)]
+        const size_t M = closed ? N : (N - 1);
+
+        // Pré-calcula tangentes e normais (para o sensor) e endpoints deslocados
+        struct SegOff
+        {
+            double ax, ay, bx, by;
+            double tx, ty;
+        }; // offset endpoints + direção
+        std::vector<SegOff> off;
+        off.reserve(M);
+
+        for (size_t i = 0; i < M; ++i)
+        {
+            const size_t i0 = i;
+            const size_t i1 = (i + 1) % N;
+            const auto &A = seg[i0];
+            const auto &B = seg[i1];
+
+            // tangente do segmento
+            double tx = B.x - A.x;
+            double ty = B.y - A.y;
+            normalize(tx, ty);
+
+            // normal candidata (rot90 da tangente)
+            double nx = -ty, ny = tx;
+
+            // decidir sentido PARA O SENSOR:
+            // use o ponto médio para definir v = (sensor - mid); dot(n, v) > 0 => n aponta para o sensor
+            const double mx = 0.5 * (A.x + B.x);
+            const double my = 0.5 * (A.y + B.y);
+            const double vx = sensor_global.x - mx;
+            const double vy = sensor_global.y - my;
+            if (nx * vx + ny * vy < 0.0)
+            {
+                nx = -nx;
+                ny = -ny;
+            } // garante n -> sensor
+
+            // desloca endpoints da aresta
+            SegOff s;
+            s.tx = tx;
+            s.ty = ty;
+            s.ax = A.x + d * nx;
+            s.ay = A.y + d * ny;
+            s.by = B.y + d * ny;
+            s.bx = B.x + d * nx;
+            off.push_back(s);
+        }
+
+        // Construir vértices de saída
+        out.reserve(N + (closed ? 0 : 1));
+
+        if (!closed)
+        {
+            // endpoint inicial: apenas A0'
+            geometry_msgs::Point q0;
+            q0.x = off[0].ax;
+            q0.y = off[0].ay;
+            q0.z = 0.0;
+            out.push_back(q0);
+        }
+
+        // vértices internos: interseção das retas deslocadas adjacentes
+        for (size_t i = 0; i < (closed ? N : (N - 2)); ++i)
+        {
+            // no caso aberto, o vértice i+1 da polilinha original é “interno”
+            const size_t k = closed ? i : (i + 1);
+
+            const size_t segL = (k + M - 1) % M; // aresta à esquerda (anterior)
+            const size_t segR = k % M;           // aresta à direita (próxima)
+
+            // reta L: passa por (aL -> bL), direção tL
+            const SegOff &L = off[segL];
+            // reta R: passa por (aR -> bR), direção tR
+            const SegOff &R = off[segR];
+
+            double xi, yi;
+            bool ok = lineIntersection(L.ax, L.ay, L.tx, L.ty,
+                                       R.ax, R.ay, R.tx, R.ty,
+                                       xi, yi);
+
+            geometry_msgs::Point q;
+            if (ok)
+            {
+                q.x = xi;
+                q.y = yi;
+                q.z = 0.0;
+            }
+            else
+            {
+                // quase paralelas: bevel simples usando “fim de L” e “início de R”
+                // aqui escolhemos o ponto médio entre L.b e R.a para evitar gaps/overlaps
+                q.x = 0.5 * (L.bx + R.ax);
+                q.y = 0.5 * (L.by + R.ay);
+                q.z = 0.0;
+            }
+            out.push_back(q);
+        }
+
+        if (!closed)
+        {
+            // endpoint final: apenas B_last'
+            const SegOff &last = off.back();
+            geometry_msgs::Point qN;
+            qN.x = last.bx;
+            qN.y = last.by;
+            qN.z = 0.0;
+            out.push_back(qN);
+        }
+        else
+        {
+            // fechado: também fecha o polígono; já adicionamos N vértices internos,
+            // então não precisa repetir o primeiro.
+        }
+
+        if (!closed && out.size() >= 2)
+        {
+            // primeira ponta: move no sentido oposto à aresta (out[0] -> out[1])
+            {
+                double dx = out[1].x - out[0].x;
+                double dy = out[1].y - out[0].y;
+                const double n = std::hypot(dx, dy);
+                if (n > 1e-8)
+                {
+                    dx /= n;
+                    dy /= n;
+                    out[0].x -= d * dx;
+                    out[0].y -= d * dy;
+                }
+            }
+            // última ponta: move no mesmo sentido da aresta (out[n-2] -> out[n-1])
+            {
+                const size_t npts = out.size();
+                double dx = out[npts - 1].x - out[npts - 2].x;
+                double dy = out[npts - 1].y - out[npts - 2].y;
+                const double n = std::hypot(dx, dy);
+                if (n > 1e-8)
+                {
+                    dx /= n;
+                    dy /= n;
+                    out[npts - 1].x += d * dx;
+                    out[npts - 1].y += d * dy;
+                }
+            }
+        }
+
+        return out;
     }
 
     /**
@@ -633,16 +1034,17 @@ namespace tangentbug_utils
         bool has_T = false;
         for (const auto &E : LTG.edges)
         {
-            for(const auto &e : E){
+            for (const auto &e : E)
+            {
                 IntersectionResult result = intersectSegments(x, T, LTG.nodes[e.from], LTG.nodes[e.to]);
-                if(result.intersects){
+                if (result.intersects)
+                {
                     std::cout << "Interseção com LTG em: (" << result.point.x << ", " << result.point.y << ")" << std::endl;
                     has_T = true;
                 }
             }
         }
 
-        
         if (!has_T)
         {
             std::cout << "Adicionando aresta x->T pois não há interseção com LTG" << std::endl;
@@ -650,6 +1052,65 @@ namespace tangentbug_utils
             int idx_T = static_cast<int>(V1_nodes.size());
             V1_nodes.push_back(T);
             G1_edges.push_back({Edge{idx_x, idx_T, dist2(x, T)}});
+        }
+    }
+
+    /**
+     * Constrói o subgrafo G2 = { V ∈ LTG | d(V,T) < dMin } preservando arestas internas.
+     *
+     * @param ltg   Grafo LTG original (nós e arestas).
+     * @param dMin  d_min(T): menor distância observada ao alvo durante o BF.
+     * @param T     Alvo (mesmo frame dos nós).
+     * @param eps   Tolerância numérica para comparação estrita (<).
+     * @return      Subgrafo G2 na mesma estrutura (nodes + edges remapeados).
+     */
+    void buildG2(const Graph &ltg,
+                 double dMin,
+                 const geometry_msgs::Point &T,
+                 Graph &g2,
+                 double eps)
+    {
+
+        const std::size_t N = ltg.nodes.size();
+        if (N == 0)
+        {
+            g2.edges.clear();
+            return;
+        }
+
+        // 1) Quais nós ficam? (d(V,T) < dMin - eps)
+        std::vector<int> old2new(N, -1);
+        g2.nodes.reserve(N); // upper bound
+
+        for (std::size_t i = 0; i < N; ++i)
+        {
+            const auto &v = ltg.nodes[i];
+            const double d = dist2(v, T);
+
+            if (d < dMin - eps)
+            {
+                old2new[i] = static_cast<int>(g2.nodes.size());
+                g2.nodes.push_back(v);
+            }
+        }
+
+        // Se não sobrou nó, retorna vazio
+        const std::size_t N2 = g2.nodes.size();
+        if (N2 == 0)
+        {
+            g2.edges.clear();
+            return;
+        }
+
+        // 2) Prepara lista de adjacência do G2
+        g2.edges.assign(N2, std::vector<Edge>());
+
+        // 3) Cria as arestas virtuais do augumented graph
+        for (std::size_t u = 0; u < N2; ++u)
+        {
+            const double duT2 = dist2(g2.nodes[u], T);
+            const Edge e = {static_cast<int>(u), -1, duT2, true};
+            g2.edges[u].push_back(e);
         }
     }
 
@@ -663,25 +1124,41 @@ namespace tangentbug_utils
         for (std::vector<Edge> &edges : subgraphG1.edges)
         {
             Edge eVT;
-            for (Edge &e : edges)
+            double cost = 0.0;
+            bool has_edge_virtual = false;
+            for (const Edge &e : edges)
             {
-                const geometry_msgs::Point &V = subgraphG1.nodes[e.to];
-                e.cost = e.cost ? e.cost : dist2(subgraphG1.nodes[e.from], V);
-                double dVT2 = dist2(V, T);
-                eVT = {e.to, -1, dVT2, true};
-                if (e.cost + dVT2 < best_d2)
-                {
-                    best_d2 = e.cost + dVT2;
-                    best_edge = e;
+                geometry_msgs::Point V = subgraphG1.nodes[e.to];
+                auto point = subgraphG1.nodes[e.from];
+                if(e.isVirtual){
+                    V = T;
                 }
-                std::cout << "From (" << subgraphG1.nodes[e.from].x << ", " << subgraphG1.nodes[e.from].y << ") to ("
-                          << V.x << ", " << V.y << "): cost=" << e.cost << ", dVT2=" << dVT2
-                          << ", total=" << (e.cost + dVT2) << std::endl;
+                cost += dist2(point, V);
+                spawnLineSegment(point.x, point.y, 0.0,
+                                 V.x, V.y, 0.0, "#ff0000", 100);
+                if (e.isVirtual)
+                {
+                    has_edge_virtual = true;
+                }
             }
-            if (!edges.empty())
+
+            if (!has_edge_virtual)
             {
+                double dVT2 = dist2(subgraphG1.nodes[edges.back().to], T);
+                eVT = {edges.back().to, -1, dVT2, true};
+                cost += dVT2;
                 edges.push_back(eVT);
             }
+
+            if (cost < best_d2)
+            {
+                best_d2 = cost;
+                best_edge = edges.front();
+            }
+        }
+        if (best_edge.from == -1)
+        {
+            throw std::runtime_error("No edge found in findClosestEdgeToTarget");
         }
         return best_edge;
     }

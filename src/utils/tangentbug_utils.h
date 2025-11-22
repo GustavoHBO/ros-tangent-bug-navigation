@@ -45,6 +45,21 @@ namespace tangentbug_utils
         double angle_tolerance_deg = 5.0);
     IntersectionResult intersectSegments(const geometry_msgs::Point &p1, const geometry_msgs::Point &p2,
                                          const geometry_msgs::Point &q1, const geometry_msgs::Point &q2);
+/**
+     * Offset (inflar) uma polilinha no SENTIDO DO SENSOR.
+     * - Cada aresta é deslocada paralelamente pela normal que aponta para o sensor.
+     * - Nos vértices, unimos por interseção das duas arestas deslocadas (bevel/miter simples).
+     * - Se não houver interseção (quase paralelas), fazemos bevel: usamos o fim de uma e início da outra.
+     *
+     * @param seg            Polilinha em frame global (pontos crus do obstáculo).
+     * @param sensor_global  Posição do sensor no mesmo frame.
+     * @param d              Distância de inflação (ex.: raio do robô + margem).
+     * @param closed         true para polígono fechado; false para aberto (LIDAR típico).
+     */
+    std::vector<geometry_msgs::Point> offsetPolylineTowardSensor(const std::vector<geometry_msgs::Point> &seg,
+                                                                 const geometry_msgs::Point &sensor_global,
+                                                                 double d,
+                                                                 bool closed = false);
 
     std::vector<std::vector<geometry_msgs::Point>> parallelSegmentsAtDistance(
         const geometry_msgs::Point &p1,
@@ -58,14 +73,25 @@ namespace tangentbug_utils
                  Graph &G1   // Grafo resultante (nós + arestas)
     );
 
+    void buildG2(const Graph &ltg,
+                 double dMin,
+                 const geometry_msgs::Point &T,
+                 Graph &g2,
+                 double eps = 1e-6);
+
     std::vector<geometry_msgs::Point> laserScanToPoints(
         const sensor_msgs::LaserScan &scan,
         const tf2::Transform &tf_laser_to_odom);
 
-    Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts, double max_gap);
+    Graph makeGraphRunsByGap(const std::vector<geometry_msgs::Point> &pts,
+                             double max_gap,
+                             double angle_threshold_deg);
 
     Edge findClosestEdgeToTarget(
         const geometry_msgs::Point &T,
         Graph &subgraphG1);
 
+    double angleBetweenPoints(const geometry_msgs::Point &p1,
+                              const geometry_msgs::Point &p2,
+                              const geometry_msgs::Point &p3);
 }
